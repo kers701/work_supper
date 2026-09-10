@@ -16,5 +16,13 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <!-- 程序集信息，便于签名识别 -->
+    <Version>1.1.0</Version>
+    <Company>现场守护</Company>
+    <Product>ProcessGuard</Product>
+    <Description>进程/端口/串口自动拉起守护</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+  </ItemGroup>
 </Project>

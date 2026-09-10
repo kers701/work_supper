@@ -1,0 +1,57 @@
+签名构建说明
+============
+
+签名不是“再编一次不同的程序”，而是对已经生成的 ProcessGuard.exe
+盖上数字签名，减少 Windows 提示“未知发布者 / 被 SmartScreen 拦截”。
+
+一、工程里已经有的内容
+--------------------
+1. GitHub Actions 自动签名
+   文件: .github/workflows/build-windows.yml
+   步骤名: Code sign (optional)
+
+   推送代码后会先编译 exe，再尝试签名。
+   若仓库没有配置证书 Secrets，日志里会出现：
+     未配置 WINDOWS_CERT_PFX，跳过签名
+   这时产物仍是可用的 exe，只是未签名。
+
+2. 本地脚本
+   build.bat  — 只编译出 exe
+   sign.bat   — 用本目录 cert.pfx 对 exe 签名
+
+二、GitHub 上启用自动签名（推荐）
+--------------------------------
+1. 准备代码签名证书 cert.pfx（向 CA 购买，不是随便自签）
+2. 本机 PowerShell 转 Base64：
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx")) | Set-Clipboard
+3. 打开 GitHub 仓库 → Settings → Secrets and variables → Actions
+4. 新建两个 Secret：
+
+   名称: WINDOWS_CERT_PFX
+   值:   刚才复制的整段 Base64
+
+   名称: WINDOWS_CERT_PASSWORD
+   值:   证书密码
+
+5. 再 push 一次，或在 Actions 里手动 Run workflow
+6. 看日志里 “Code sign (optional)” 是否成功，再下载 Artifact
+
+三、本机签名
+------------
+1. 安装 .NET 8 SDK + Windows SDK（带 signtool）
+2. 运行 build.bat
+3. 把 cert.pfx 放到工程根目录
+4. 运行 sign.bat，输入密码
+
+四、没有证书时
+--------------
+可以正常使用未签名的 exe。
+公司内网 / 关闭 SmartScreen 的工位通常没问题。
+对外分发或频繁被拦截时，再买代码签名证书即可。
+
+五、和“构建”的关系
+------------------
+  构建 = dotnet publish → 得到 exe
+  签名 = signtool sign → 给 exe 盖章
+
+  两步可以分开；CI 里是“构建成功后再签名”。

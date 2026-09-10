@@ -15,12 +15,14 @@ public class MainForm : Form
     {
         _state = Storage.Load();
         Text = "现场守护";
-        Width = 1100;
-        Height = 600;
+        Font = UiTheme.Ui;
+        MinimumSize = new Size(1280, 720);
+        Size = new Size(1360, 780);
         StartPosition = FormStartPosition.CenterScreen;
 
         _master.Text = "应用总开关（关闭后所有配置停止检测）";
-        _master.SetBounds(16, 12, 360, 24);
+        _master.Font = UiTheme.UiBold;
+        _master.SetBounds(20, 16, 480, 32);
         _master.Checked = _state.MasterEnabled;
         _master.CheckedChanged += (_, _) =>
         {
@@ -28,12 +30,16 @@ public class MainForm : Form
             Storage.Save(_state);
         };
 
-        var add = MakeBtn("添加配置", 680, 10, 90, AddConfig);
-        var edit = MakeBtn("编辑选中", 780, 10, 90, EditConfig);
-        var del = MakeBtn("删除选中", 880, 10, 90, DeleteConfig);
-        var trayBtn = MakeBtn("最小化到托盘", 980, 10, 100, HideToTray);
+        var add = MakeBtn("添加配置", 820, 12, 120, 36, AddConfig);
+        var edit = MakeBtn("编辑选中", 950, 12, 120, 36, EditConfig);
+        var del = MakeBtn("删除选中", 1080, 12, 120, 36, DeleteConfig);
+        var trayBtn = MakeBtn("最小化到托盘", 1210, 12, 130, 36, HideToTray);
 
-        _grid.SetBounds(16, 48, 1050, 430);
+        _grid.SetBounds(20, 60, 1320, 580);
+        _grid.Font = UiTheme.Grid;
+        _grid.ColumnHeadersDefaultCellStyle.Font = UiTheme.UiBold;
+        _grid.ColumnHeadersHeight = 40;
+        _grid.RowTemplate.Height = 36;
         _grid.AllowUserToAddRows = false;
         _grid.AllowUserToDeleteRows = false;
         _grid.ReadOnly = true;
@@ -41,6 +47,9 @@ public class MainForm : Form
         _grid.MultiSelect = false;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        _grid.EnableHeadersVisualStyles = false;
+        _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 244, 248);
+        _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         _grid.Columns.Add("id", "id");
         _grid.Columns["id"]!.Visible = false;
         _grid.Columns.Add("enabled", "启用");
@@ -51,28 +60,30 @@ public class MainForm : Form
         _grid.Columns.Add("count", "已触发次数");
         _grid.Columns.Add("last", "最近触发");
         _grid.Columns.Add("msg", "最近结果");
-        _grid.Columns["enabled"]!.FillWeight = 50;
-        _grid.Columns["name"]!.FillWeight = 140;
-        _grid.Columns["logic"]!.FillWeight = 50;
-        _grid.Columns["interval"]!.FillWeight = 70;
-        _grid.Columns["cooldown"]!.FillWeight = 70;
-        _grid.Columns["count"]!.FillWeight = 80;
-        _grid.Columns["last"]!.FillWeight = 80;
-        _grid.Columns["msg"]!.FillWeight = 360;
+        _grid.Columns["enabled"]!.FillWeight = 55;
+        _grid.Columns["name"]!.FillWeight = 150;
+        _grid.Columns["logic"]!.FillWeight = 55;
+        _grid.Columns["interval"]!.FillWeight = 80;
+        _grid.Columns["cooldown"]!.FillWeight = 80;
+        _grid.Columns["count"]!.FillWeight = 95;
+        _grid.Columns["last"]!.FillWeight = 90;
+        _grid.Columns["msg"]!.FillWeight = 380;
         _grid.CellDoubleClick += (_, _) => EditConfig();
 
-        var toggle = MakeBtn("切换选中配置开关", 16, 492, 150, ToggleSelected);
+        var toggle = MakeBtn("切换选中配置开关", 20, 660, 200, 40, ToggleSelected);
         var tip = new Label
         {
-            Text = "关闭窗口会藏到托盘继续检测。配置：用户目录\\.process_guard\\configs.json",
-            Left = 180,
-            Top = 496,
-            Width = 880
+            Text = "关闭窗口会藏到托盘继续检测。配置保存在：用户目录\\.process_guard\\configs.json",
+            Font = UiTheme.Ui,
+            Left = 240,
+            Top = 668,
+            Width = 1050,
+            Height = 32
         };
 
         Controls.AddRange(new Control[] { _master, add, edit, del, trayBtn, _grid, toggle, tip });
 
-        var menu = new ContextMenuStrip();
+        var menu = new ContextMenuStrip { Font = UiTheme.Ui };
         menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
         menu.Items.Add("退出", null, (_, _) => Quit());
         _tray.Text = "现场守护";
@@ -84,6 +95,7 @@ public class MainForm : Form
         Resize += (_, _) =>
         {
             if (WindowState == FormWindowState.Minimized) HideToTray();
+            LayoutControls();
         };
         FormClosing += (_, e) =>
         {
@@ -95,12 +107,41 @@ public class MainForm : Form
         _timer.Interval = 1000;
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
+        LayoutControls();
         RefreshGrid();
     }
 
-    private static Button MakeBtn(string text, int x, int y, int w, Action click)
+    private void LayoutControls()
     {
-        var b = new Button { Text = text, Left = x, Top = y, Width = w };
+        var pad = 20;
+        var topH = 56;
+        var bottomH = 64;
+        _grid.Left = pad;
+        _grid.Top = topH;
+        _grid.Width = Math.Max(400, ClientSize.Width - pad * 2);
+        _grid.Height = Math.Max(200, ClientSize.Height - topH - bottomH);
+        var btnY = ClientSize.Height - 52;
+        foreach (Control c in Controls)
+        {
+            if (c is Button b && b.Text == "切换选中配置开关")
+                b.Top = btnY;
+            if (c is Label lb && lb.Text.Contains("托盘"))
+                lb.Top = btnY + 8;
+        }
+    }
+
+    private static Button MakeBtn(string text, int x, int y, int w, int h, Action click)
+    {
+        var b = new Button
+        {
+            Text = text,
+            Left = x,
+            Top = y,
+            Width = w,
+            Height = h,
+            Font = UiTheme.Ui,
+            UseVisualStyleBackColor = true
+        };
         b.Click += (_, _) => click();
         return b;
     }
@@ -152,7 +193,7 @@ public class MainForm : Form
         var cfg = Selected();
         if (cfg == null)
         {
-            MessageBox.Show("请先选中一条配置");
+            MessageBox.Show(this, "请先选中一条配置", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         using var dlg = new ConfigDialog(cfg);
@@ -169,7 +210,7 @@ public class MainForm : Form
     {
         var cfg = Selected();
         if (cfg == null) return;
-        if (MessageBox.Show($"删除配置「{cfg.Name}」？", "确认", MessageBoxButtons.YesNo) != DialogResult.Yes)
+        if (MessageBox.Show(this, $"删除配置「{cfg.Name}」？", "确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
         _state.Configs.RemoveAll(c => c.Id == cfg.Id);
         Storage.Save(_state);
@@ -181,7 +222,7 @@ public class MainForm : Form
         var cfg = Selected();
         if (cfg == null)
         {
-            MessageBox.Show("请先选中一条配置");
+            MessageBox.Show(this, "请先选中一条配置", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         cfg.Enabled = !cfg.Enabled;

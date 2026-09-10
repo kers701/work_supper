@@ -11,7 +11,9 @@ public class WatchConfig
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
     public string Name { get; set; } = "";
     public bool Enabled { get; set; } = true;
+    /// <summary>检测间隔，单位：分钟</summary>
     public double IntervalMin { get; set; } = 2;
+    /// <summary>触发后冷却，单位：分钟，可自定义</summary>
     public double CooldownMin { get; set; } = 3;
     public string Logic { get; set; } = "OR";
     public List<WatchCondition> Conditions { get; set; } = new();
@@ -27,6 +29,8 @@ public class WatchCondition
     public string Process { get; set; } = "";
     public string Host { get; set; } = "127.0.0.1";
     public int Port { get; set; }
+    /// <summary>串口名，如 COM3</summary>
+    public string SerialPort { get; set; } = "";
 }
 
 public class WatchAction

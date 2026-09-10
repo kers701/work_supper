@@ -21,47 +21,55 @@ public class ConfigDialog : Form
         _actions.AddRange(_src.Actions);
 
         Text = existing == null ? "添加配置" : "编辑配置";
-        Width = 760;
-        Height = 700;
+        Font = UiTheme.Ui;
+        Width = 920;
+        Height = 820;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
 
-        var y = 16;
-        Controls.Add(LabelAt("配置名称", 16, y, 80));
-        _name.SetBounds(100, y - 2, 620, 24);
+        var y = 20;
+        Controls.Add(LabelAt("配置名称", 20, y, 100));
+        _name.SetBounds(130, y - 2, 750, 32);
+        _name.Font = UiTheme.Ui;
         _name.Text = _src.Name;
         Controls.Add(_name);
-        y += 36;
+        y += 48;
 
-        Controls.Add(LabelAt("检测间隔(分钟)", 16, y, 110));
-        _interval.SetBounds(126, y - 2, 60, 24);
+        Controls.Add(LabelAt("检测间隔(分钟)", 20, y, 140));
+        _interval.SetBounds(160, y - 2, 80, 32);
+        _interval.Font = UiTheme.Ui;
         _interval.Text = _src.IntervalMin.ToString();
         Controls.Add(_interval);
 
-        Controls.Add(LabelAt("触发后冷却(分钟)", 200, y, 120));
-        _cooldown.SetBounds(322, y - 2, 60, 24);
+        Controls.Add(LabelAt("触发后冷却(分钟)", 270, y, 150));
+        _cooldown.SetBounds(430, y - 2, 80, 32);
+        _cooldown.Font = UiTheme.Ui;
         _cooldown.Text = _src.CooldownMin.ToString();
         Controls.Add(_cooldown);
 
-        Controls.Add(LabelAt("条件逻辑", 400, y, 70));
-        _logic.SetBounds(470, y - 2, 80, 24);
+        Controls.Add(LabelAt("条件逻辑", 540, y, 90));
+        _logic.SetBounds(630, y - 2, 100, 32);
+        _logic.Font = UiTheme.Ui;
         _logic.DropDownStyle = ComboBoxStyle.DropDownList;
         _logic.Items.AddRange(new object[] { "OR", "AND" });
         _logic.SelectedItem = _src.Logic is "AND" or "OR" ? _src.Logic : "OR";
         Controls.Add(_logic);
-        Controls.Add(LabelAt("OR任一成立  AND全部成立", 560, y + 2, 180));
-        y += 40;
+        Controls.Add(LabelAt("OR任一 / AND全部", 740, y + 4, 150));
+        y += 52;
 
-        Controls.Add(LabelAt("条件 (IF)", 16, y, 200));
-        y += 22;
-        _conds.SetBounds(16, y, 710, 150);
+        Controls.Add(LabelAt("条件 (IF)", 20, y, 200));
+        y += 28;
+        _conds.SetBounds(20, y, 860, 200);
+        _conds.Font = UiTheme.Ui;
+        _conds.ItemHeight = 28;
         Controls.Add(_conds);
-        y += 158;
-        var bp = Btn("添加进程条件", 16, y, 120, AddProcess);
-        var bport = Btn("添加端口条件", 146, y, 120, AddPort);
-        var bdc = Btn("删除选中条件", 276, y, 120, () =>
+        y += 210;
+        var bp = Btn("添加进程条件", 20, y, 150, 40, AddProcess);
+        var bport = Btn("添加网络端口", 180, y, 150, 40, AddPort);
+        var bserial = Btn("添加串口条件", 340, y, 150, 40, AddSerial);
+        var bdc = Btn("删除选中条件", 500, y, 150, 40, () =>
         {
             if (_conds.SelectedIndex >= 0)
             {
@@ -69,16 +77,18 @@ public class ConfigDialog : Form
                 RefreshConds();
             }
         });
-        Controls.AddRange(new Control[] { bp, bport, bdc });
-        y += 40;
+        Controls.AddRange(new Control[] { bp, bport, bserial, bdc });
+        y += 56;
 
-        Controls.Add(LabelAt("动作 (THEN)", 16, y, 200));
-        y += 22;
-        _acts.SetBounds(16, y, 710, 130);
+        Controls.Add(LabelAt("动作 (THEN)", 20, y, 200));
+        y += 28;
+        _acts.SetBounds(20, y, 860, 160);
+        _acts.Font = UiTheme.Ui;
+        _acts.ItemHeight = 28;
         Controls.Add(_acts);
-        y += 138;
-        Controls.Add(Btn("添加打开软件", 16, y, 120, AddOpen));
-        Controls.Add(Btn("删除选中动作", 146, y, 120, () =>
+        y += 172;
+        Controls.Add(Btn("添加打开软件", 20, y, 160, 40, AddOpen));
+        Controls.Add(Btn("删除选中动作", 190, y, 160, 40, () =>
         {
             if (_acts.SelectedIndex >= 0)
             {
@@ -87,8 +97,8 @@ public class ConfigDialog : Form
             }
         }));
 
-        var save = Btn("保存配置", 520, 620, 100, Save);
-        var cancel = Btn("取消", 630, 620, 90, () => { DialogResult = DialogResult.Cancel; Close(); });
+        var save = Btn("保存配置", 620, 720, 130, 44, Save);
+        var cancel = Btn("取消", 760, 720, 120, 44, () => { DialogResult = DialogResult.Cancel; Close(); });
         Controls.AddRange(new Control[] { save, cancel });
 
         RefreshConds();
@@ -96,11 +106,20 @@ public class ConfigDialog : Form
     }
 
     private static Label LabelAt(string text, int x, int y, int w) =>
-        new() { Text = text, Left = x, Top = y, Width = w };
+        new() { Text = text, Left = x, Top = y, Width = w, Height = 28, Font = UiTheme.Ui };
 
-    private static Button Btn(string text, int x, int y, int w, Action click)
+    private static Button Btn(string text, int x, int y, int w, int h, Action click)
     {
-        var b = new Button { Text = text, Left = x, Top = y, Width = w };
+        var b = new Button
+        {
+            Text = text,
+            Left = x,
+            Top = y,
+            Width = w,
+            Height = h,
+            Font = UiTheme.Ui,
+            UseVisualStyleBackColor = true
+        };
         b.Click += (_, _) => click();
         return b;
     }
@@ -119,14 +138,14 @@ public class ConfigDialog : Form
 
     private void AddProcess()
     {
-        using var f = new SimpleForm("进程条件", 460, 220);
+        using var f = new SimpleForm("进程条件", 560, 300);
         var name = f.AddText("进程名（如 ScanApp.exe）", "");
         var type = f.AddCombo("类型：process_missing=消失成立，process_running=存在成立",
             new[] { "process_missing", "process_running" }, "process_missing");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (string.IsNullOrWhiteSpace(name.Text))
         {
-            MessageBox.Show("请填写进程名");
+            MessageBox.Show(this, "请填写进程名");
             return;
         }
         _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim() });
@@ -135,7 +154,7 @@ public class ConfigDialog : Form
 
     private void AddPort()
     {
-        using var f = new SimpleForm("端口条件", 460, 260);
+        using var f = new SimpleForm("网络端口条件", 560, 340);
         var host = f.AddText("主机", "127.0.0.1");
         var port = f.AddText("端口", "");
         var type = f.AddCombo("类型：port_idle=掉线成立，port_open=能连通成立",
@@ -143,7 +162,7 @@ public class ConfigDialog : Form
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (!int.TryParse(port.Text, out var p) || p < 1 || p > 65535)
         {
-            MessageBox.Show("端口必须是 1-65535");
+            MessageBox.Show(this, "端口必须是 1-65535");
             return;
         }
         var h = string.IsNullOrWhiteSpace(host.Text) ? "127.0.0.1" : host.Text.Trim();
@@ -151,9 +170,38 @@ public class ConfigDialog : Form
         RefreshConds();
     }
 
+    private void AddSerial()
+    {
+        var available = Engine.ListSerialPorts();
+        var hint = available.Length > 0
+            ? "当前系统串口: " + string.Join(", ", available)
+            : "当前未检测到串口（可仍填写 COM3 等）";
+        using var f = new SimpleForm("串口条件", 600, 400);
+        var name = f.AddText("串口名（如 COM3）", available.Length > 0 ? available[0] : "COM3");
+        var type = f.AddCombo(
+            "类型说明见下方提示",
+            new[] { "serial_missing", "serial_present", "serial_idle", "serial_busy" },
+            "serial_idle");
+        f.AddHint(hint);
+        f.AddHint("missing=消失  present=存在  idle=空闲无人占用  busy=非空闲被占用");
+        f.AddHint("软件应占用串口却变成空闲时，选 serial_idle 可触发重启");
+        if (f.ShowDialog(this) != DialogResult.OK) return;
+        if (string.IsNullOrWhiteSpace(name.Text))
+        {
+            MessageBox.Show(this, "请填写串口名，例如 COM3");
+            return;
+        }
+        _conditions.Add(new WatchCondition
+        {
+            Type = type.Text,
+            SerialPort = Engine.NormalizeSerialName(name.Text)
+        });
+        RefreshConds();
+    }
+
     private void AddOpen()
     {
-        using var f = new SimpleForm("打开软件", 560, 360);
+        using var f = new SimpleForm("打开软件", 640, 420);
         var path = f.AddText("程序路径", "", browse: true);
         var args = f.AddText("启动参数（可选）", "");
         var cwd = f.AddText("工作目录（可选）", "");
@@ -162,7 +210,7 @@ public class ConfigDialog : Form
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (string.IsNullOrWhiteSpace(path.Text))
         {
-            MessageBox.Show("请选择程序路径");
+            MessageBox.Show(this, "请选择程序路径");
             return;
         }
         _actions.Add(new WatchAction
@@ -181,27 +229,27 @@ public class ConfigDialog : Form
     {
         if (string.IsNullOrWhiteSpace(_name.Text))
         {
-            MessageBox.Show("请填写配置名称");
+            MessageBox.Show(this, "请填写配置名称");
             return;
         }
         if (!double.TryParse(_interval.Text, out var iv) || iv <= 0)
         {
-            MessageBox.Show("检测间隔必须大于 0");
+            MessageBox.Show(this, "检测间隔必须大于 0");
             return;
         }
         if (!double.TryParse(_cooldown.Text, out var cv) || cv < 0)
         {
-            MessageBox.Show("冷却时间必须大于等于 0");
+            MessageBox.Show(this, "冷却时间必须大于等于 0");
             return;
         }
         if (_conditions.Count == 0)
         {
-            MessageBox.Show("至少添加一个条件");
+            MessageBox.Show(this, "至少添加一个条件");
             return;
         }
         if (_actions.Count == 0)
         {
-            MessageBox.Show("至少添加一个动作");
+            MessageBox.Show(this, "至少添加一个动作");
             return;
         }
 
@@ -226,27 +274,42 @@ public class ConfigDialog : Form
 
 internal class SimpleForm : Form
 {
-    private int _y = 16;
+    private int _y = 20;
 
     public SimpleForm(string title, int w, int h)
     {
         Text = title;
+        Font = UiTheme.Ui;
         Width = w;
         Height = h;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        var ok = new Button { Text = "确定", Width = 90, DialogResult = DialogResult.OK };
-        var cancel = new Button { Text = "取消", Width = 90, DialogResult = DialogResult.Cancel };
+        var ok = new Button
+        {
+            Text = "确定",
+            Width = 110,
+            Height = 40,
+            Font = UiTheme.Ui,
+            DialogResult = DialogResult.OK
+        };
+        var cancel = new Button
+        {
+            Text = "取消",
+            Width = 110,
+            Height = 40,
+            Font = UiTheme.Ui,
+            DialogResult = DialogResult.Cancel
+        };
         AcceptButton = ok;
         CancelButton = cancel;
         Load += (_, _) =>
         {
-            ok.Left = Width - 220;
-            ok.Top = Height - 80;
-            cancel.Left = Width - 120;
-            cancel.Top = Height - 80;
+            ok.Left = Width - 260;
+            ok.Top = ClientSize.Height - 56;
+            cancel.Left = Width - 140;
+            cancel.Top = ClientSize.Height - 56;
         };
         Controls.Add(ok);
         Controls.Add(cancel);
@@ -254,13 +317,29 @@ internal class SimpleForm : Form
 
     public TextBox AddText(string label, string value, bool browse = false)
     {
-        Controls.Add(new Label { Text = label, Left = 16, Top = _y, Width = 500 });
-        _y += 22;
-        var tb = new TextBox { Left = 16, Top = _y, Width = browse ? 380 : 500, Text = value };
+        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = 560, Height = 28, Font = UiTheme.Ui });
+        _y += 30;
+        var tb = new TextBox
+        {
+            Left = 20,
+            Top = _y,
+            Width = browse ? 430 : 540,
+            Height = 32,
+            Font = UiTheme.Ui,
+            Text = value
+        };
         Controls.Add(tb);
         if (browse)
         {
-            var b = new Button { Text = "浏览", Left = 406, Top = _y - 2, Width = 80 };
+            var b = new Button
+            {
+                Text = "浏览",
+                Left = 460,
+                Top = _y - 2,
+                Width = 100,
+                Height = 36,
+                Font = UiTheme.Ui
+            };
             b.Click += (_, _) =>
             {
                 using var ofd = new OpenFileDialog
@@ -272,33 +351,59 @@ internal class SimpleForm : Form
             };
             Controls.Add(b);
         }
-        _y += 32;
+        _y += 44;
         return tb;
     }
 
     public ComboBox AddCombo(string label, string[] items, string selected)
     {
-        Controls.Add(new Label { Text = label, Left = 16, Top = _y, Width = 500 });
-        _y += 22;
+        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = 560, Height = 28, Font = UiTheme.Ui });
+        _y += 30;
         var cb = new ComboBox
         {
-            Left = 16,
+            Left = 20,
             Top = _y,
-            Width = 500,
+            Width = 540,
+            Height = 32,
+            Font = UiTheme.Ui,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         cb.Items.AddRange(items);
         cb.SelectedItem = selected;
         Controls.Add(cb);
-        _y += 32;
+        _y += 44;
         return cb;
+    }
+
+    public void AddHint(string text)
+    {
+        Controls.Add(new Label
+        {
+            Text = text,
+            Left = 20,
+            Top = _y,
+            Width = 540,
+            Height = 28,
+            Font = UiTheme.Ui,
+            ForeColor = Color.DimGray
+        });
+        _y += 32;
     }
 
     public CheckBox AddCheck(string text, bool value)
     {
-        var cb = new CheckBox { Text = text, Left = 16, Top = _y, Width = 500, Checked = value };
+        var cb = new CheckBox
+        {
+            Text = text,
+            Left = 20,
+            Top = _y,
+            Width = 540,
+            Height = 32,
+            Font = UiTheme.Ui,
+            Checked = value
+        };
         Controls.Add(cb);
-        _y += 32;
+        _y += 40;
         return cb;
     }
 }

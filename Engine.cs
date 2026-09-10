@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.IO.Ports;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 
 namespace ProcessGuard;
 
@@ -72,12 +74,102 @@ public static class Engine
         }
     }
 
+    /// <summary>规范化串口名：COM3 / com3 / 3 → COM3</summary>
+    public static string NormalizeSerialName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "";
+        var s = name.Trim().ToUpperInvariant();
+        var m = Regex.Match(s, @"^(?:COM)?(\d+)$");
+        return m.Success ? "COM" + m.Groups[1].Value : s;
+    }
+
+    public static bool SerialPortPresent(string name)
+    {
+        var target = NormalizeSerialName(name);
+        if (string.IsNullOrEmpty(target)) return false;
+        try
+        {
+            var ports = SerialPort.GetPortNames();
+            return ports.Any(p => NormalizeSerialName(p) == target);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static string[] ListSerialPorts()
+    {
+        try
+        {
+            return SerialPort.GetPortNames()
+                .Select(NormalizeSerialName)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct()
+                .OrderBy(x => x)
+                .ToArray();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// 串口空闲：设备在系统中，且当前可独占打开（没有程序占用）。
+    /// 软件本应占用串口却变成空闲时，可用此条件触发重启。
+    /// </summary>
+    public static bool SerialPortIdle(string name)
+    {
+        var target = NormalizeSerialName(name);
+        if (string.IsNullOrEmpty(target) || !SerialPortPresent(target))
+            return false;
+        try
+        {
+            using var sp = new SerialPort(target)
+            {
+                ReadTimeout = 100,
+                WriteTimeout = 100
+            };
+            sp.Open();
+            sp.Close();
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // 已被其他进程占用 → 非空闲
+            return false;
+        }
+        catch (IOException)
+        {
+            // 打开失败，视为非空闲或异常占用
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>串口非空闲（被占用）：存在且无法独占打开</summary>
+    public static bool SerialPortBusy(string name)
+    {
+        var target = NormalizeSerialName(name);
+        if (string.IsNullOrEmpty(target) || !SerialPortPresent(target))
+            return false;
+        return !SerialPortIdle(target);
+    }
+
     public static bool EvalCondition(WatchCondition c) => c.Type switch
     {
         "process_missing" => !ProcessRunning(c.Process),
         "process_running" => ProcessRunning(c.Process),
         "port_idle" => !PortOpen(c.Host, c.Port),
         "port_open" => PortOpen(c.Host, c.Port),
+        "serial_missing" => !SerialPortPresent(c.SerialPort),
+        "serial_present" => SerialPortPresent(c.SerialPort),
+        "serial_idle" => SerialPortIdle(c.SerialPort),
+        "serial_busy" => SerialPortBusy(c.SerialPort),
         _ => false
     };
 
@@ -130,8 +222,12 @@ public static class Engine
     {
         "process_missing" => "进程消失: " + c.Process,
         "process_running" => "进程存在: " + c.Process,
-        "port_idle" => $"端口空闲/掉线: {c.Host}:{c.Port}",
-        "port_open" => $"端口可连通: {c.Host}:{c.Port}",
+        "port_idle" => $"网络端口空闲/掉线: {c.Host}:{c.Port}",
+        "port_open" => $"网络端口可连通: {c.Host}:{c.Port}",
+        "serial_missing" => "串口消失/掉线: " + NormalizeSerialName(c.SerialPort),
+        "serial_present" => "串口存在: " + NormalizeSerialName(c.SerialPort),
+        "serial_idle" => "串口空闲(无人占用): " + NormalizeSerialName(c.SerialPort),
+        "serial_busy" => "串口非空闲(被占用): " + NormalizeSerialName(c.SerialPort),
         _ => c.Type
     };
 
