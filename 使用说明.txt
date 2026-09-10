@@ -1,0 +1,25 @@
+现场守护 ProcessGuard.exe
+=========================
+
+这是标准 Windows 桌面程序（C# WinForms）。
+把 ProcessGuard.exe 拷到工位电脑，双击即可，不用装 Python / Java / .NET。
+
+功能
+----
+- 多套配置，各自开关 + 总开关
+- 条件：进程消失/存在、端口掉线/可连通，支持 AND / OR
+- 动作：打开指定软件
+- 打开前可先结束残留进程
+- 触发后冷却，避免连开多个窗口
+- 关闭窗口进入托盘，后台继续检测
+- 显示已触发次数
+
+配置文件
+--------
+C:\Users\当前用户\.process_guard\configs.json
+
+重新编译（开发机）
+------------------
+dotnet publish -c Release -r win-x64 --self-contained true
+产物：
+bin\Release\net8.0-windows\win-x64\publish\ProcessGuard.exe
