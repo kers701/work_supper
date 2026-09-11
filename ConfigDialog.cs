@@ -9,6 +9,7 @@ public class ConfigDialog : Form
     private readonly TextBox _interval = new();
     private readonly TextBox _cooldown = new();
     private readonly ComboBox _logic = new();
+    private readonly ToggleSwitch _enabled = new();
     private readonly ListBox _conds = new();
     private readonly ListBox _acts = new();
     private readonly List<WatchCondition> _conditions = new();
@@ -35,6 +36,13 @@ public class ConfigDialog : Form
         _name.Font = UiTheme.Ui;
         _name.Text = _src.Name;
         Controls.Add(_name);
+        y += 48;
+
+        Controls.Add(LabelAt("配置开关", 20, y, 100));
+        _enabled.SetBounds(130, y - 2, 54, 30);
+        _enabled.Checked = _src.Enabled;
+        Controls.Add(_enabled);
+        Controls.Add(new Label { Text = "开启后才会参与检测", Left = 195, Top = y + 2, Width = 220, Height = 28, Font = UiTheme.Ui, ForeColor = Color.DimGray });
         y += 48;
 
         Controls.Add(LabelAt("检测间隔(分钟)", 20, y, 140));
@@ -138,8 +146,12 @@ public class ConfigDialog : Form
 
     private void AddProcess()
     {
+        using var picker = new ProcessPickerDialog();
+        if (picker.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(picker.SelectedProcess))
+            return;
+
         using var f = new SimpleForm("进程条件", 560, 300);
-        var name = f.AddText("进程名（如 ScanApp.exe）", "");
+        var name = f.AddText("已选择进程（可修改）", picker.SelectedProcess);
         var type = f.AddCombo("类型：process_missing=消失成立，process_running=存在成立",
             new[] { "process_missing", "process_running" }, "process_missing");
         if (f.ShowDialog(this) != DialogResult.OK) return;
@@ -257,7 +269,7 @@ public class ConfigDialog : Form
         {
             Id = _src.Id,
             Name = _name.Text.Trim(),
-            Enabled = _src.Enabled,
+            Enabled = _enabled.Checked,
             IntervalMin = iv,
             CooldownMin = cv,
             Logic = _logic.SelectedItem?.ToString() ?? "OR",

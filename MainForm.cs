@@ -4,7 +4,7 @@ public class MainForm : Form
 {
     private readonly AppState _state;
     private readonly DataGridView _grid = new();
-    private readonly CheckBox _master = new();
+    private readonly ToggleSwitch _master = new();
     private readonly NotifyIcon _tray = new();
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly Dictionary<string, DateTime> _lastCheck = new();
@@ -16,13 +16,21 @@ public class MainForm : Form
         _state = Storage.Load();
         Text = "现场守护";
         Font = UiTheme.Ui;
+        Icon = AppIcon.Create();
         MinimumSize = new Size(1280, 720);
         Size = new Size(1360, 780);
         StartPosition = FormStartPosition.CenterScreen;
 
-        _master.Text = "应用总开关（关闭后所有配置停止检测）";
-        _master.Font = UiTheme.UiBold;
-        _master.SetBounds(20, 16, 480, 32);
+        var masterLabel = new Label
+        {
+            Text = "应用总开关",
+            Font = UiTheme.UiBold,
+            Left = 20,
+            Top = 17,
+            Width = 125,
+            Height = 30
+        };
+        _master.SetBounds(145, 14, 54, 30);
         _master.Checked = _state.MasterEnabled;
         _master.CheckedChanged += (_, _) =>
         {
@@ -81,7 +89,7 @@ public class MainForm : Form
             Height = 32
         };
 
-        Controls.AddRange(new Control[] { _master, add, edit, del, trayBtn, _grid, toggle, tip });
+        Controls.AddRange(new Control[] { masterLabel, _master, add, edit, del, trayBtn, _grid, toggle, tip });
 
         var menu = new ContextMenuStrip { Font = UiTheme.Ui };
         menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
