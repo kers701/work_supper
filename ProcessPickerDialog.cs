@@ -99,14 +99,18 @@ public sealed class ProcessPickerDialog : Form
     {
         var query = _search.Text.Trim();
         _grid.Rows.Clear();
+        // 保留首行作为绘制缓冲，避免搜索刷新或滚动时首条数据残留重叠。
+        _grid.Rows.Add("", "", "", "");
         foreach (var item in _items.Where(x => query.Length == 0 || x.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || x.WindowTitle.Contains(query, StringComparison.OrdinalIgnoreCase)))
             _grid.Rows.Add(item.Name, item.Id, item.WindowTitle, $"{item.MemoryMb:N0} MB");
-        _status.Text = $"共 {_items.Count} 个进程，显示 {_grid.Rows.Count} 个 · 双击或点击“添加选中”";
+        _grid.ClearSelection();
+        _grid.CurrentCell = null;
+        _status.Text = $"共 {_items.Count} 个进程，显示 {_grid.Rows.Count - 1} 个 · 双击或点击“添加选中”";
     }
 
     private void Choose()
     {
-        if (_grid.SelectedRows.Count == 0)
+        if (_grid.SelectedRows.Count == 0 || _grid.SelectedRows[0].Index == 0)
         {
             MessageBox.Show(this, "请先选中一个进程", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
