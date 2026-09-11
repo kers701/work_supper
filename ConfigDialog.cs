@@ -224,7 +224,7 @@ public class ConfigDialog : Form
         using var f = new SimpleForm("编辑网络端口条件", 560, 340);
         var host = f.AddText("主机", old.Host);
         var port = f.AddText("端口", old.Port.ToString());
-        var type = f.AddCombo("类型", new[] { "port_idle", "port_open" }, old.Type);
+        var type = f.AddCombo("类型", new[] { "port_idle", "port_open", "port_occupied", "port_free" }, old.Type);
         if (f.ShowDialog(this) != DialogResult.OK || !int.TryParse(port.Text, out var p) || p is < 1 or > 65535) return;
         _conditions.Add(new WatchCondition { Type = type.Text, Host = host.Text.Trim(), Port = p });
     }
@@ -276,8 +276,8 @@ public class ConfigDialog : Form
         using var f = new SimpleForm("网络端口条件", 560, 340);
         var host = f.AddText("主机", "127.0.0.1");
         var port = f.AddText("端口", "");
-        var type = f.AddCombo("类型：port_idle=掉线成立，port_open=能连通成立",
-            new[] { "port_idle", "port_open" }, "port_idle");
+        var type = f.AddCombo("类型：掉线 / 可连通 / 被占用 / 空闲可绑定",
+            new[] { "port_idle", "port_open", "port_occupied", "port_free" }, "port_idle");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (!int.TryParse(port.Text, out var p) || p < 1 || p > 65535)
         {

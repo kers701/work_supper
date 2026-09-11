@@ -42,4 +42,16 @@ public static class Storage
         var json = JsonSerializer.Serialize(state, Options);
         File.WriteAllText(ConfigFile, json);
     }
+
+    public static void Export(AppState state, string path)
+    {
+        var json = JsonSerializer.Serialize(state, Options);
+        File.WriteAllText(path, json);
+    }
+
+    public static AppState? Import(string path)
+    {
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<AppState>(json, Options);
+    }
 }

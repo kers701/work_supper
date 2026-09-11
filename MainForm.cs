@@ -86,17 +86,19 @@ public class MainForm : Form
         _grid.CellDoubleClick += (_, _) => EditConfig();
 
         var toggle = MakeBtn("切换选中配置开关", 20, 660, 200, 40, ToggleSelected);
+        var export = MakeBtn("导出配置", 240, 660, 140, 40, ExportConfigs);
+        var import = MakeBtn("导入配置", 390, 660, 140, 40, ImportConfigs);
         var tip = new Label
         {
             Text = "关闭窗口会藏到托盘继续检测。配置保存在：用户目录\\.process_guard\\configs.json",
             Font = UiTheme.Ui,
-            Left = 240,
+            Left = 550,
             Top = 668,
             Width = 1050,
             Height = 32
         };
 
-        Controls.AddRange(new Control[] { masterLabel, _master, add, edit, del, trayBtn, _grid, toggle, tip });
+        Controls.AddRange(new Control[] { masterLabel, _master, add, edit, del, trayBtn, _grid, toggle, export, import, tip });
 
         var menu = new ContextMenuStrip { Font = UiTheme.Ui };
         menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
@@ -140,6 +142,8 @@ public class MainForm : Form
         {
             if (c is Button b && b.Text == "切换选中配置开关")
                 b.Top = btnY;
+            if (c is Button b2 && (b2.Text == "导出配置" || b2.Text == "导入配置"))
+                b2.Top = btnY;
             if (c is Label lb && lb.Text.Contains("托盘"))
                 lb.Top = btnY + 8;
         }
@@ -255,6 +259,59 @@ public class MainForm : Form
         cfg.Enabled = !cfg.Enabled;
         Storage.Save(_state);
         RefreshGrid();
+    }
+
+    private void ExportConfigs()
+    {
+        using var dialog = new SaveFileDialog
+        {
+            Title = "导出配置文件",
+            Filter = "JSON 配置文件 (*.json)|*.json|全部文件 (*.*)|*.*",
+            FileName = "process_guard_configs.json",
+            OverwritePrompt = true
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            Storage.Export(_state, dialog.FileName);
+            MessageBox.Show(this, $"已导出 {_state.Configs.Count} 条配置。", "导出成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "导出失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ImportConfigs()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "导入配置文件",
+            Filter = "JSON 配置文件 (*.json)|*.json|全部文件 (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            var imported = Storage.Import(dialog.FileName);
+            if (imported?.Configs == null || imported.Configs.Count == 0)
+            {
+                MessageBox.Show(this, "文件中没有可导入的配置。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            foreach (var config in imported.Configs)
+            {
+                config.Id = Guid.NewGuid().ToString("N")[..10];
+                _state.Configs.Add(config);
+            }
+            Storage.Save(_state);
+            RefreshGrid();
+            MessageBox.Show(this, $"已追加导入 {imported.Configs.Count} 条配置。", "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "导入失败，请选择有效的 JSON 配置文件。\n\n" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private void HideToTray()

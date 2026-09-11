@@ -112,6 +112,28 @@ public static class Engine
         }
     }
 
+    public static bool PortOccupied(string host, int port)
+    {
+        if (port is < 1 or > 65535) return false;
+        try
+        {
+            var address = string.IsNullOrWhiteSpace(host) || host is "localhost" or "127.0.0.1"
+                ? System.Net.IPAddress.Loopback
+                : System.Net.IPAddress.Parse(host);
+            using var listener = new TcpListener(address, port);
+            listener.Start();
+            listener.Stop();
+            return false;
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+        {
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public static bool PortFree(string host, int port) => !PortOccupied(host, port);
+
     /// <summary>规范化串口名：COM3 / com3 / 3 → COM3</summary>
     public static string NormalizeSerialName(string name)
     {
@@ -204,6 +226,8 @@ public static class Engine
         "process_running" => ProcessRunning(c),
         "port_idle" => !PortOpen(c.Host, c.Port),
         "port_open" => PortOpen(c.Host, c.Port),
+        "port_occupied" => PortOccupied(c.Host, c.Port),
+        "port_free" => PortFree(c.Host, c.Port),
         "serial_missing" => !SerialPortPresent(c.SerialPort),
         "serial_present" => SerialPortPresent(c.SerialPort),
         "serial_idle" => SerialPortIdle(c.SerialPort),
@@ -275,6 +299,8 @@ public static class Engine
         "process_running" => ProcessText("进程存在", c),
         "port_idle" => $"网络端口空闲/掉线: {c.Host}:{c.Port}",
         "port_open" => $"网络端口可连通: {c.Host}:{c.Port}",
+        "port_occupied" => $"网络端口被占用: {c.Host}:{c.Port}",
+        "port_free" => $"网络端口空闲可绑定: {c.Host}:{c.Port}",
         "serial_missing" => "串口消失/掉线: " + NormalizeSerialName(c.SerialPort),
         "serial_present" => "串口存在: " + NormalizeSerialName(c.SerialPort),
         "serial_idle" => "串口空闲(无人占用): " + NormalizeSerialName(c.SerialPort),
