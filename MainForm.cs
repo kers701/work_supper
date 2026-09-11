@@ -41,8 +41,8 @@ public class MainForm : Form
             Storage.Save(_state);
         };
 
-        var filterLabel = new Label { Text = "筛选", Left = 235, Top = 17, Width = 45, Height = 30, Font = UiTheme.UiBold };
-        _filter.SetBounds(280, 12, 510, 36);
+        var filterLabel = new Label { Text = "筛选：", Left = 225, Top = 17, Width = 70, Height = 30, Font = UiTheme.UiBold, AutoSize = false };
+        _filter.SetBounds(300, 12, 490, 36);
         _filter.Font = UiTheme.Ui;
         _filter.PlaceholderText = "按配置名称、逻辑或最近结果筛选";
         _filter.TextChanged += (_, _) => RefreshGrid();
@@ -68,6 +68,8 @@ public class MainForm : Form
         _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
         _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
+        _grid.BackgroundColor = Color.White;
+        _grid.CellPainting += PaintHomeCell;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.EnableHeadersVisualStyles = false;
@@ -220,6 +222,7 @@ public class MainForm : Form
                 if (Convert.ToString(row.Cells["id"].Value) == sel)
                 {
                     row.Selected = true;
+                    _grid.CurrentCell = row.Cells["name"];
                     break;
                 }
             }
@@ -231,6 +234,27 @@ public class MainForm : Form
         if (_grid.SelectedRows.Count == 0) return null;
         var id = Convert.ToString(_grid.SelectedRows[0].Cells["id"].Value);
         return _state.Configs.FirstOrDefault(c => c.Id == id);
+    }
+
+    private static void PaintHomeCell(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (sender is not DataGridView grid || e.RowIndex < 0 || e.ColumnIndex < 0) return;
+        var selected = grid.Rows[e.RowIndex].Selected;
+        var background = selected ? Color.FromArgb(225, 235, 250) :
+            (e.RowIndex % 2 == 0 ? Color.White : Color.FromArgb(248, 250, 252));
+        using var brush = new SolidBrush(background);
+        e.Graphics.FillRectangle(brush, e.CellBounds);
+        if (e.ColumnIndex == 1)
+        {
+            var value = Convert.ToString(e.FormattedValue) ?? "";
+            TextRenderer.DrawText(e.Graphics, value, e.CellStyle.Font ?? grid.Font,
+                e.CellBounds, Color.FromArgb(30, 40, 55),
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            e.Handled = true;
+            return;
+        }
+        e.PaintContent(e.CellBounds);
+        e.Handled = true;
     }
 
     private void AddConfig()
