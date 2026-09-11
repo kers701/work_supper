@@ -41,7 +41,7 @@ public class MainForm : Form
         var add = MakeBtn("添加配置", 820, 12, 120, 36, AddConfig);
         var edit = MakeBtn("编辑选中", 950, 12, 120, 36, EditConfig);
         var del = MakeBtn("删除选中", 1080, 12, 120, 36, DeleteConfig);
-        var trayBtn = MakeBtn("最小化到托盘", 1210, 12, 130, 36, HideToTray);
+        var trayBtn = MakeBtn("最小化到托盘", 1190, 12, 150, 36, HideToTray);
 
         _grid.SetBounds(20, 60, 1320, 580);
         _grid.Font = UiTheme.Grid;
@@ -103,7 +103,7 @@ public class MainForm : Form
         menu.Items.Add("退出", null, (_, _) => Quit());
         _tray.Text = "现场守护";
         _tray.Visible = true;
-        _tray.Icon = SystemIcons.Shield;
+        _tray.Icon = Icon;
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ShowFromTray();
 

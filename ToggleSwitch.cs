@@ -12,6 +12,8 @@ public sealed class ToggleSwitch : CheckBox
         FlatAppearance.BorderSize = 0;
         Text = "";
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
         TabStop = true;
         CheckedChanged += (_, _) => Invalidate();
@@ -19,6 +21,7 @@ public sealed class ToggleSwitch : CheckBox
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        e.Graphics.Clear(Parent?.BackColor ?? SystemColors.Control);
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var track = new Rectangle(1, 5, Width - 2, Height - 10);
         using var trackBrush = new SolidBrush(Checked ? Color.FromArgb(39, 120, 224) : Color.FromArgb(190, 201, 214));

@@ -48,7 +48,8 @@ public sealed class ProcessPickerDialog : Form
         _grid.CellPainting += PaintSelectedBorder;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        _grid.RowTemplate.Height = 32;
+        _grid.RowTemplate.Height = 42;
+        _grid.ColumnHeadersHeight = 42;
         _grid.Columns.Add("name", "进程");
         _grid.Columns.Add("id", "PID");
         _grid.Columns.Add("title", "窗口标题");
@@ -60,13 +61,13 @@ public sealed class ProcessPickerDialog : Form
         _grid.CellDoubleClick += (_, _) => Choose();
         Controls.Add(_grid);
 
-        _status.SetBounds(20, 510, 450, 30);
+        _status.SetBounds(20, 510, 480, 30);
         _status.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
         _status.ForeColor = Color.DimGray;
         Controls.Add(_status);
-        var cancel = new Button { Text = "取消", Left = 535, Top = 506, Width = 90, Height = 40, Font = UiTheme.Ui, DialogResult = DialogResult.Cancel };
+        var cancel = new Button { Text = "取消", Left = 520, Top = 506, Width = 90, Height = 40, Font = UiTheme.Ui, DialogResult = DialogResult.Cancel };
         cancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-        var choose = new Button { Text = "添加选中", Left = 635, Top = 506, Width = 90, Height = 40, Font = UiTheme.Ui, DialogResult = DialogResult.None };
+        var choose = new Button { Text = "添加选中", Left = 620, Top = 506, Width = 105, Height = 40, Font = UiTheme.Ui, DialogResult = DialogResult.None };
         choose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         choose.Click += (_, _) => Choose();
         Controls.AddRange(new Control[] { cancel, choose });

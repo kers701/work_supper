@@ -24,7 +24,7 @@ public class ConfigDialog : Form
         Text = existing == null ? "添加配置" : "编辑配置";
         Font = UiTheme.Ui;
         Width = 920;
-        Height = 820;
+        Height = 1040;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -69,16 +69,16 @@ public class ConfigDialog : Form
 
         Controls.Add(LabelAt("条件 (IF)", 20, y, 200));
         y += 28;
-        _conds.SetBounds(20, y, 860, 200);
+        _conds.SetBounds(20, y, 860, 240);
         _conds.Font = UiTheme.Ui;
         _conds.ItemHeight = 28;
         ConfigureSelectionStyle(_conds);
         Controls.Add(_conds);
-        y += 210;
-        var bp = Btn("添加进程条件", 20, y, 150, 40, AddProcess);
-        var bport = Btn("添加网络端口", 180, y, 150, 40, AddPort);
-        var bserial = Btn("添加串口条件", 340, y, 150, 40, AddSerial);
-        var bdc = Btn("删除选中条件", 500, y, 150, 40, () =>
+        y += 250;
+        var bp = Btn("添加进程条件", 20, y, 170, 40, AddProcess);
+        var bport = Btn("添加网络端口", 200, y, 170, 40, AddPort);
+        var bserial = Btn("添加串口条件", 380, y, 170, 40, AddSerial);
+        var bdc = Btn("删除选中条件", 560, y, 170, 40, () =>
         {
             if (_conds.SelectedIndex >= 0)
             {
@@ -87,18 +87,19 @@ public class ConfigDialog : Form
             }
         });
         Controls.AddRange(new Control[] { bp, bport, bserial, bdc });
+        _conds.DoubleClick += (_, _) => EditSelectedCondition();
         y += 56;
 
         Controls.Add(LabelAt("动作 (THEN)", 20, y, 200));
         y += 28;
-        _acts.SetBounds(20, y, 860, 160);
+        _acts.SetBounds(20, y, 860, 200);
         _acts.Font = UiTheme.Ui;
         _acts.ItemHeight = 28;
         ConfigureSelectionStyle(_acts);
         Controls.Add(_acts);
-        y += 172;
-        Controls.Add(Btn("添加打开软件", 20, y, 160, 40, AddOpen));
-        Controls.Add(Btn("删除选中动作", 190, y, 160, 40, () =>
+        y += 212;
+        Controls.Add(Btn("添加运行文件", 20, y, 180, 40, AddOpen));
+        Controls.Add(Btn("删除选中动作", 220, y, 180, 40, () =>
         {
             if (_acts.SelectedIndex >= 0)
             {
@@ -106,9 +107,10 @@ public class ConfigDialog : Form
                 RefreshActs();
             }
         }));
+        _acts.DoubleClick += (_, _) => EditSelectedAction();
 
-        var save = Btn("保存配置", 620, 720, 130, 44, Save);
-        var cancel = Btn("取消", 760, 720, 120, 44, () => { DialogResult = DialogResult.Cancel; Close(); });
+        var save = Btn("保存配置", 620, 950, 130, 44, Save);
+        var cancel = Btn("取消", 760, 950, 120, 44, () => { DialogResult = DialogResult.Cancel; Close(); });
         Controls.AddRange(new Control[] { save, cancel });
 
         RefreshConds();
@@ -131,12 +133,9 @@ public class ConfigDialog : Form
             if ((e.State & DrawItemState.Selected) != 0)
             {
                 using var pen = new Pen(Color.FromArgb(39, 120, 224), 2);
-                var rect = e.Bounds;
-                rect.Width -= 1;
-                rect.Height -= 1;
+                var rect = new Rectangle(e.Bounds.Left + 1, e.Bounds.Top + 2, e.Bounds.Width - 3, e.Bounds.Height - 5);
                 e.Graphics.DrawRectangle(pen, rect);
             }
-            e.DrawFocusRectangle();
         };
     }
 
@@ -166,6 +165,77 @@ public class ConfigDialog : Form
     {
         _acts.Items.Clear();
         foreach (var a in _actions) _acts.Items.Add(Engine.ActionText(a));
+    }
+
+    private void EditSelectedCondition()
+    {
+        var index = _conds.SelectedIndex;
+        if (index < 0) return;
+        var old = _conditions[index];
+        _conditions.RemoveAt(index);
+        switch (old.Type)
+        {
+            case "process_missing":
+            case "process_running":
+                EditProcess(old);
+                break;
+            case "port_idle":
+            case "port_open":
+                EditPort(old);
+                break;
+            default:
+                EditSerial(old);
+                break;
+        }
+        if (_conditions.Count == index) _conditions.Insert(index, old);
+        RefreshConds();
+    }
+
+    private void EditSelectedAction()
+    {
+        var index = _acts.SelectedIndex;
+        if (index < 0) return;
+        var old = _actions[index];
+        _actions.RemoveAt(index);
+        AddOpen(old);
+        if (_actions.Count == index) _actions.Insert(index, old);
+        RefreshActs();
+    }
+
+    private void EditProcess(WatchCondition old)
+    {
+        using var f = new SimpleForm("编辑进程条件", 560, 360);
+        var name = f.AddText("进程匹配内容", old.Process);
+        var type = f.AddCombo("类型", new[] { "process_missing", "process_running" }, old.Type);
+        var modeText = old.ProcessMatch?.ToLowerInvariant() switch { "contains" => "模糊包含", "regex" => "正则表达式", _ => "精确匹配" };
+        var match = f.AddCombo("匹配方式", new[] { "精确匹配", "模糊包含", "正则表达式" }, modeText);
+        if (f.ShowDialog(this) != DialogResult.OK) return;
+        var mode = match.Text switch { "模糊包含" => "contains", "正则表达式" => "regex", _ => "exact" };
+        if (!Engine.IsValidProcessPattern(name.Text.Trim(), mode))
+        {
+            MessageBox.Show(this, "正则表达式格式无效", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim(), ProcessMatch = mode });
+    }
+
+    private void EditPort(WatchCondition old)
+    {
+        using var f = new SimpleForm("编辑网络端口条件", 560, 340);
+        var host = f.AddText("主机", old.Host);
+        var port = f.AddText("端口", old.Port.ToString());
+        var type = f.AddCombo("类型", new[] { "port_idle", "port_open" }, old.Type);
+        if (f.ShowDialog(this) != DialogResult.OK || !int.TryParse(port.Text, out var p) || p is < 1 or > 65535) return;
+        _conditions.Add(new WatchCondition { Type = type.Text, Host = host.Text.Trim(), Port = p });
+    }
+
+    private void EditSerial(WatchCondition old)
+    {
+        using var f = new SimpleForm("编辑串口条件", 600, 400);
+        var name = f.AddText("串口名", old.SerialPort);
+        var type = f.AddCombo("类型", new[] { "serial_missing", "serial_present", "serial_idle", "serial_busy" }, old.Type);
+        if (f.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(name.Text)) return;
+        _conditions.Add(new WatchCondition { Type = type.Text, SerialPort = Engine.NormalizeSerialName(name.Text) });
     }
 
     private void AddProcess()
@@ -248,15 +318,15 @@ public class ConfigDialog : Form
         RefreshConds();
     }
 
-    private void AddOpen()
+    private void AddOpen(WatchAction? existing = null)
     {
-        using var f = new SimpleForm("运行文件", 640, 420);
-        var path = f.AddText("可运行文件路径（exe、bat、cmd、ps1、svg 等）", "", browse: true,
+        using var f = new SimpleForm("编辑运行文件", 640, 620);
+        var path = f.AddText("可运行文件路径（exe、bat、cmd、ps1、svg 等）", existing?.Path ?? "", browse: true,
             filter: "常用可运行文件|*.exe;*.bat;*.cmd;*.ps1;*.com;*.msc;*.svg|全部文件|*.*");
-        var args = f.AddText("启动参数（可选）", "");
-        var cwd = f.AddText("工作目录（可选）", "");
-        var kill = f.AddCheck("打开前先结束残留进程", true);
-        var kname = f.AddText("要结束的进程名（可选，默认用 exe 文件名）", "");
+        var args = f.AddText("启动参数（可选）", existing?.Args ?? "");
+        var cwd = f.AddText("工作目录（可选）", existing?.Cwd ?? "");
+        var kill = f.AddCheck("打开前先结束残留进程", existing?.KillBefore ?? true);
+        var kname = f.AddText("要结束的进程名（可选，默认用 exe 文件名）", existing?.KillProcess ?? "");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (string.IsNullOrWhiteSpace(path.Text) || !File.Exists(path.Text.Trim()))
         {

@@ -8,22 +8,34 @@ public static class AppIcon
         using var g = Graphics.FromImage(bitmap);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
-        using var badge = new SolidBrush(Color.FromArgb(30, 111, 211));
-        g.FillRoundedRectangle(badge, new Rectangle(1, 1, 62, 62), 14);
-        using var dark = new SolidBrush(Color.FromArgb(10, 65, 145));
-        g.FillEllipse(dark, 6, 17, 19, 32);
-        g.FillEllipse(dark, 39, 17, 19, 32);
-        using var face = new SolidBrush(Color.FromArgb(227, 243, 255));
-        g.FillEllipse(face, 13, 11, 38, 42);
-        using var muzzle = new SolidBrush(Color.FromArgb(194, 225, 250));
-        g.FillEllipse(muzzle, 20, 32, 24, 19);
-        using var ink = new SolidBrush(Color.FromArgb(18, 42, 75));
-        g.FillEllipse(ink, 20, 25, 6, 6);
-        g.FillEllipse(ink, 38, 25, 6, 6);
-        g.FillEllipse(ink, 28, 36, 8, 6);
-        using var pen = new Pen(ink, 2);
-        g.DrawArc(pen, 26, 37, 12, 12, 0, 180);
+        using var glow = new SolidBrush(Color.FromArgb(42, 39, 120, 224));
+        g.FillEllipse(glow, 4, 4, 56, 56);
+        using var pen = new Pen(Color.FromArgb(190, 225, 245, 255), 4) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+        var center = new PointF(32, 32);
+        for (var i = 0; i < 3; i++)
+        {
+            var angle = i * Math.PI / 3;
+            var dx = (float)Math.Cos(angle) * 23;
+            var dy = (float)Math.Sin(angle) * 23;
+            g.DrawLine(pen, center.X - dx, center.Y - dy, center.X + dx, center.Y + dy);
+            DrawBranches(g, pen, center, new PointF(center.X + dx, center.Y + dy), angle);
+            DrawBranches(g, pen, center, new PointF(center.X - dx, center.Y - dy), angle + Math.PI);
+        }
+        using var dot = new SolidBrush(Color.FromArgb(225, 255, 255, 255));
+        g.FillEllipse(dot, 27, 27, 10, 10);
         var handle = bitmap.GetHicon();
         return (Icon)Icon.FromHandle(handle).Clone();
+    }
+
+    private static void DrawBranches(Graphics g, Pen pen, PointF center, PointF tip, double angle)
+    {
+        var length = 7f;
+        var branchAngle = Math.PI / 6;
+        var x1 = tip.X - (float)Math.Cos(angle - branchAngle) * length;
+        var y1 = tip.Y - (float)Math.Sin(angle - branchAngle) * length;
+        var x2 = tip.X - (float)Math.Cos(angle + branchAngle) * length;
+        var y2 = tip.Y - (float)Math.Sin(angle + branchAngle) * length;
+        g.DrawLine(pen, tip.X, tip.Y, x1, y1);
+        g.DrawLine(pen, tip.X, tip.Y, x2, y2);
     }
 }
