@@ -226,7 +226,8 @@ public static class Engine
         if (string.IsNullOrWhiteSpace(action.Path)) return "未指定程序路径";
 
         var notes = new List<string>();
-        if (action.KillBefore)
+        var extension = Path.GetExtension(action.Path).ToLowerInvariant();
+        if (action.KillBefore && (extension is ".exe" or ".com"))
         {
             var pname = string.IsNullOrWhiteSpace(action.KillProcess)
                 ? Path.GetFileName(action.Path)
@@ -238,12 +239,22 @@ public static class Engine
 
         try
         {
-            var psi = new ProcessStartInfo
+            var psi = new ProcessStartInfo { UseShellExecute = true };
+            if (extension is ".ps1")
             {
-                FileName = action.Path,
-                Arguments = action.Args ?? "",
-                UseShellExecute = true
-            };
+                psi.FileName = "powershell.exe";
+                psi.Arguments = $"-ExecutionPolicy Bypass -File {Quote(action.Path)} {action.Args ?? ""}";
+            }
+            else if (extension is ".bat" or ".cmd")
+            {
+                psi.FileName = "cmd.exe";
+                psi.Arguments = $"/c {Quote(action.Path)} {action.Args ?? ""}";
+            }
+            else
+            {
+                psi.FileName = action.Path;
+                psi.Arguments = action.Args ?? "";
+            }
             if (!string.IsNullOrWhiteSpace(action.Cwd))
                 psi.WorkingDirectory = action.Cwd;
             Process.Start(psi);
@@ -255,6 +266,8 @@ public static class Engine
         }
         return string.Join("；", notes);
     }
+
+    private static string Quote(string value) => "\"" + value.Replace("\"", "\\\"") + "\"";
 
     public static string ConditionText(WatchCondition c) => c.Type switch
     {
@@ -284,6 +297,6 @@ public static class Engine
     {
         var extra = string.IsNullOrWhiteSpace(a.Args) ? "" : "  参数:" + a.Args;
         var kill = a.KillBefore ? "先结束残留" : "不结束残留";
-        return $"打开软件: {a.Path}{extra}  [{kill}]";
+        return $"运行文件: {a.Path}{extra}  [{kill}]";
     }
 }

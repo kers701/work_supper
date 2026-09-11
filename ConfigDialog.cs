@@ -72,6 +72,7 @@ public class ConfigDialog : Form
         _conds.SetBounds(20, y, 860, 200);
         _conds.Font = UiTheme.Ui;
         _conds.ItemHeight = 28;
+        ConfigureSelectionStyle(_conds);
         Controls.Add(_conds);
         y += 210;
         var bp = Btn("添加进程条件", 20, y, 150, 40, AddProcess);
@@ -93,6 +94,7 @@ public class ConfigDialog : Form
         _acts.SetBounds(20, y, 860, 160);
         _acts.Font = UiTheme.Ui;
         _acts.ItemHeight = 28;
+        ConfigureSelectionStyle(_acts);
         Controls.Add(_acts);
         y += 172;
         Controls.Add(Btn("添加打开软件", 20, y, 160, 40, AddOpen));
@@ -115,6 +117,28 @@ public class ConfigDialog : Form
 
     private static Label LabelAt(string text, int x, int y, int w) =>
         new() { Text = text, Left = x, Top = y, Width = w, Height = 28, Font = UiTheme.Ui };
+
+    private static void ConfigureSelectionStyle(ListBox list)
+    {
+        list.DrawMode = DrawMode.OwnerDrawFixed;
+        list.DrawItem += (_, e) =>
+        {
+            if (e.Index < 0) return;
+            using (var background = new SolidBrush(Color.White))
+                e.Graphics.FillRectangle(background, e.Bounds);
+            using var textBrush = new SolidBrush(Color.FromArgb(30, 40, 55));
+            e.Graphics.DrawString(list.Items[e.Index]?.ToString() ?? "", list.Font, textBrush, e.Bounds.Left + 8, e.Bounds.Top + 5);
+            if ((e.State & DrawItemState.Selected) != 0)
+            {
+                using var pen = new Pen(Color.FromArgb(39, 120, 224), 2);
+                var rect = e.Bounds;
+                rect.Width -= 1;
+                rect.Height -= 1;
+                e.Graphics.DrawRectangle(pen, rect);
+            }
+            e.DrawFocusRectangle();
+        };
+    }
 
     private static Button Btn(string text, int x, int y, int w, int h, Action click)
     {
@@ -226,16 +250,17 @@ public class ConfigDialog : Form
 
     private void AddOpen()
     {
-        using var f = new SimpleForm("打开软件", 640, 420);
-        var path = f.AddText("程序路径", "", browse: true);
+        using var f = new SimpleForm("运行文件", 640, 420);
+        var path = f.AddText("可运行文件路径（exe、bat、cmd、ps1、svg 等）", "", browse: true,
+            filter: "常用可运行文件|*.exe;*.bat;*.cmd;*.ps1;*.com;*.msc;*.svg|全部文件|*.*");
         var args = f.AddText("启动参数（可选）", "");
         var cwd = f.AddText("工作目录（可选）", "");
         var kill = f.AddCheck("打开前先结束残留进程", true);
         var kname = f.AddText("要结束的进程名（可选，默认用 exe 文件名）", "");
         if (f.ShowDialog(this) != DialogResult.OK) return;
-        if (string.IsNullOrWhiteSpace(path.Text))
+        if (string.IsNullOrWhiteSpace(path.Text) || !File.Exists(path.Text.Trim()))
         {
-            MessageBox.Show(this, "请选择程序路径");
+            MessageBox.Show(this, "请选择存在的运行文件");
             return;
         }
         _actions.Add(new WatchAction
@@ -340,7 +365,7 @@ internal class SimpleForm : Form
         Controls.Add(cancel);
     }
 
-    public TextBox AddText(string label, string value, bool browse = false)
+    public TextBox AddText(string label, string value, bool browse = false, string filter = "程序 (*.exe)|*.exe|全部文件 (*.*)|*.*")
     {
         Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = 560, Height = 28, Font = UiTheme.Ui });
         _y += 30;
@@ -369,7 +394,7 @@ internal class SimpleForm : Form
             {
                 using var ofd = new OpenFileDialog
                 {
-                    Filter = "程序 (*.exe)|*.exe|全部文件 (*.*)|*.*"
+                    Filter = filter
                 };
                 if (ofd.ShowDialog(this) == DialogResult.OK)
                     tb.Text = ofd.FileName;

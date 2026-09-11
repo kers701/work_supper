@@ -53,6 +53,13 @@ public class MainForm : Form
         _grid.ReadOnly = true;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = false;
+        _grid.DefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
+        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
+        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
+        _grid.CellPainting += PaintSelectedBorder;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.EnableHeadersVisualStyles = false;
@@ -176,6 +183,18 @@ public class MainForm : Form
                 }
             }
         }
+    }
+
+    private static void PaintSelectedBorder(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || !e.State.HasFlag(DataGridViewElementStates.Selected)) return;
+        e.Paint(e.CellBounds, DataGridViewPaintParts.All);
+        using var pen = new Pen(Color.FromArgb(39, 120, 224), 1);
+        var rect = e.CellBounds;
+        rect.Width -= 1;
+        rect.Height -= 1;
+        e.Graphics.DrawRectangle(pen, rect);
+        e.Handled = true;
     }
 
     private WatchConfig? Selected()

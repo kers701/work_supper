@@ -7,10 +7,11 @@ public sealed class ToggleSwitch : CheckBox
         AutoSize = false;
         Width = 54;
         Height = 30;
-        Appearance = Appearance.Button;
+        Appearance = Appearance.Normal;
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         Text = "";
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
         Cursor = Cursors.Hand;
         TabStop = true;
         CheckedChanged += (_, _) => Invalidate();
