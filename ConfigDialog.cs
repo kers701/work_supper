@@ -175,6 +175,40 @@ public class ConfigDialog : Form
     private static string TargetText(WatchConfig config) =>
         $"{config.Name} [{config.Id[..Math.Min(8, config.Id.Length)]}]";
 
+    private static string TypeLabel(string type) => type switch
+    {
+        "process_missing" => "进程消失",
+        "process_running" => "进程存在",
+        "port_idle" => "端口掉线",
+        "port_open" => "端口可连通",
+        "port_occupied" => "端口被占用",
+        "port_free" => "端口空闲",
+        "serial_missing" => "串口消失",
+        "serial_present" => "串口存在",
+        "serial_idle" => "串口空闲",
+        "serial_busy" => "串口被占用",
+        "link_cooling" => "上游冷却中",
+        "link_untriggered" => "上游未触发",
+        _ => type
+    };
+
+    private static string TypeCode(string label) => label switch
+    {
+        "进程消失" => "process_missing",
+        "进程存在" => "process_running",
+        "端口掉线" => "port_idle",
+        "端口可连通" => "port_open",
+        "端口被占用" => "port_occupied",
+        "端口空闲" => "port_free",
+        "串口消失" => "serial_missing",
+        "串口存在" => "serial_present",
+        "串口空闲" => "serial_idle",
+        "串口被占用" => "serial_busy",
+        "上游冷却中" => "link_cooling",
+        "上游未触发" => "link_untriggered",
+        _ => label
+    };
+
     private void AddLinkCondition()
     {
         var targets = LinkTargets();
@@ -184,13 +218,13 @@ public class ConfigDialog : Form
             return;
         }
         using var f = new SimpleForm("添加连携条件", 600, 300);
-        var type = f.AddCombo("条件：上游冷却中 / 上游未触发",
-            new[] { "link_cooling", "link_untriggered" }, "link_cooling");
+        var type = f.AddCombo("类型：上游冷却中 / 上游未触发",
+            new[] { "上游冷却中", "上游未触发" }, "上游冷却中");
         var target = f.AddCombo("上游配置", targets.Select(TargetText).ToArray(), TargetText(targets[0]));
         if (f.ShowDialog(this) != DialogResult.OK) return;
         var index = target.SelectedIndex;
         if (index < 0) return;
-        _conditions.Add(new WatchCondition { Type = type.Text, LinkedConfigId = targets[index].Id });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), LinkedConfigId = targets[index].Id });
         RefreshConds();
     }
 
@@ -215,12 +249,12 @@ public class ConfigDialog : Form
         var targets = LinkTargets();
         if (targets.Count == 0) return;
         using var f = new SimpleForm("编辑连携条件", 600, 300);
-        var type = f.AddCombo("条件：上游冷却中 / 上游未触发",
-            new[] { "link_cooling", "link_untriggered" }, old.Type);
+        var type = f.AddCombo("类型：上游冷却中 / 上游未触发",
+            new[] { "上游冷却中", "上游未触发" }, TypeLabel(old.Type));
         var existingTarget = targets.FirstOrDefault(x => x.Id == old.LinkedConfigId) ?? targets[0];
         var target = f.AddCombo("上游配置", targets.Select(TargetText).ToArray(), TargetText(existingTarget));
         if (f.ShowDialog(this) != DialogResult.OK || target.SelectedIndex < 0) return;
-        _conditions.Add(new WatchCondition { Type = type.Text, LinkedConfigId = targets[target.SelectedIndex].Id });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), LinkedConfigId = targets[target.SelectedIndex].Id });
     }
 
     private void EditSelectedCondition()
@@ -269,7 +303,7 @@ public class ConfigDialog : Form
     {
         using var f = new SimpleForm("编辑进程条件", 560, 360);
         var name = f.AddText("进程匹配内容", old.Process);
-        var type = f.AddCombo("类型", new[] { "process_missing", "process_running" }, old.Type);
+        var type = f.AddCombo("类型：进程消失 / 进程存在", new[] { "进程消失", "进程存在" }, TypeLabel(old.Type));
         var modeText = old.ProcessMatch?.ToLowerInvariant() switch { "contains" => "模糊包含", "regex" => "正则表达式", _ => "精确匹配" };
         var match = f.AddCombo("匹配方式", new[] { "精确匹配", "模糊包含", "正则表达式" }, modeText);
         if (f.ShowDialog(this) != DialogResult.OK) return;
@@ -279,7 +313,7 @@ public class ConfigDialog : Form
             MessageBox.Show(this, "正则表达式格式无效", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim(), ProcessMatch = mode });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), Process = name.Text.Trim(), ProcessMatch = mode });
     }
 
     private void EditPort(WatchCondition old)
@@ -287,18 +321,20 @@ public class ConfigDialog : Form
         using var f = new SimpleForm("编辑网络端口条件", 560, 340);
         var host = f.AddText("主机", old.Host);
         var port = f.AddText("端口", old.Port.ToString());
-        var type = f.AddCombo("类型", new[] { "port_idle", "port_open", "port_occupied", "port_free" }, old.Type);
+        var type = f.AddCombo("类型：端口掉线 / 端口可连通 / 端口被占用 / 端口空闲",
+            new[] { "端口掉线", "端口可连通", "端口被占用", "端口空闲" }, TypeLabel(old.Type));
         if (f.ShowDialog(this) != DialogResult.OK || !int.TryParse(port.Text, out var p) || p is < 1 or > 65535) return;
-        _conditions.Add(new WatchCondition { Type = type.Text, Host = host.Text.Trim(), Port = p });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), Host = host.Text.Trim(), Port = p });
     }
 
     private void EditSerial(WatchCondition old)
     {
         using var f = new SimpleForm("编辑串口条件", 600, 400);
         var name = f.AddText("串口名", old.SerialPort);
-        var type = f.AddCombo("类型", new[] { "serial_missing", "serial_present", "serial_idle", "serial_busy" }, old.Type);
+        var type = f.AddCombo("类型：串口消失 / 串口存在 / 串口空闲 / 串口被占用",
+            new[] { "串口消失", "串口存在", "串口空闲", "串口被占用" }, TypeLabel(old.Type));
         if (f.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(name.Text)) return;
-        _conditions.Add(new WatchCondition { Type = type.Text, SerialPort = Engine.NormalizeSerialName(name.Text) });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), SerialPort = Engine.NormalizeSerialName(name.Text) });
     }
 
     private void AddProcess()
@@ -309,8 +345,8 @@ public class ConfigDialog : Form
 
         using var f = new SimpleForm("进程条件", 560, 360);
         var name = f.AddText("已选择进程（可修改）", picker.SelectedProcess);
-        var type = f.AddCombo("类型：process_missing=消失成立，process_running=存在成立",
-            new[] { "process_missing", "process_running" }, "process_missing");
+        var type = f.AddCombo("类型：进程消失 / 进程存在",
+            new[] { "进程消失", "进程存在" }, "进程消失");
         var match = f.AddCombo("匹配方式：精确 / 模糊包含 / 正则表达式",
             new[] { "精确匹配", "模糊包含", "正则表达式" }, "精确匹配");
         if (f.ShowDialog(this) != DialogResult.OK) return;
@@ -330,7 +366,7 @@ public class ConfigDialog : Form
             MessageBox.Show(this, "正则表达式格式无效，请检查后重试", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim(), ProcessMatch = mode });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), Process = name.Text.Trim(), ProcessMatch = mode });
         RefreshConds();
     }
 
@@ -339,8 +375,8 @@ public class ConfigDialog : Form
         using var f = new SimpleForm("网络端口条件", 560, 340);
         var host = f.AddText("主机", "127.0.0.1");
         var port = f.AddText("端口", "");
-        var type = f.AddCombo("类型：掉线 / 可连通 / 被占用 / 空闲可绑定",
-            new[] { "port_idle", "port_open", "port_occupied", "port_free" }, "port_idle");
+        var type = f.AddCombo("类型：端口掉线 / 端口可连通 / 端口被占用 / 端口空闲",
+            new[] { "端口掉线", "端口可连通", "端口被占用", "端口空闲" }, "端口掉线");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (!int.TryParse(port.Text, out var p) || p < 1 || p > 65535)
         {
@@ -348,7 +384,7 @@ public class ConfigDialog : Form
             return;
         }
         var h = string.IsNullOrWhiteSpace(host.Text) ? "127.0.0.1" : host.Text.Trim();
-        _conditions.Add(new WatchCondition { Type = type.Text, Host = h, Port = p });
+        _conditions.Add(new WatchCondition { Type = TypeCode(type.Text), Host = h, Port = p });
         RefreshConds();
     }
 
@@ -361,12 +397,12 @@ public class ConfigDialog : Form
         using var f = new SimpleForm("串口条件", 600, 400);
         var name = f.AddText("串口名（如 COM3）", available.Length > 0 ? available[0] : "COM3");
         var type = f.AddCombo(
-            "类型说明见下方提示",
-            new[] { "serial_missing", "serial_present", "serial_idle", "serial_busy" },
-            "serial_idle");
+            "类型：串口消失 / 串口存在 / 串口空闲 / 串口被占用",
+            new[] { "串口消失", "串口存在", "串口空闲", "串口被占用" },
+            "串口空闲");
         f.AddHint(hint);
-        f.AddHint("missing=消失  present=存在  idle=空闲无人占用  busy=非空闲被占用");
-        f.AddHint("软件应占用串口却变成空闲时，选 serial_idle 可触发重启");
+        f.AddHint("串口空闲表示当前没有其他程序占用，串口被占用表示无法独占打开");
+        f.AddHint("软件应占用串口却变成空闲时，可选择“串口空闲”触发重启");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (string.IsNullOrWhiteSpace(name.Text))
         {
@@ -375,7 +411,7 @@ public class ConfigDialog : Form
         }
         _conditions.Add(new WatchCondition
         {
-            Type = type.Text,
+            Type = TypeCode(type.Text),
             SerialPort = Engine.NormalizeSerialName(name.Text)
         });
         RefreshConds();
@@ -500,13 +536,15 @@ internal class SimpleForm : Form
 
     public TextBox AddText(string label, string value, bool browse = false, string filter = "程序 (*.exe)|*.exe|全部文件 (*.*)|*.*")
     {
-        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = 560, Height = 28, Font = UiTheme.Ui });
+        var contentWidth = Math.Max(240, ClientSize.Width - 40);
+        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = contentWidth, Height = 28, Font = UiTheme.Ui });
         _y += 30;
+        var textWidth = browse ? Math.Max(180, contentWidth - 110) : contentWidth;
         var tb = new TextBox
         {
             Left = 20,
             Top = _y,
-            Width = browse ? 430 : 540,
+            Width = textWidth,
             Height = 32,
             Font = UiTheme.Ui,
             Text = value
@@ -517,9 +555,9 @@ internal class SimpleForm : Form
             var b = new Button
             {
                 Text = "浏览",
-                Left = 460,
+                Left = tb.Right + 10,
                 Top = _y - 2,
-                Width = 100,
+                Width = Math.Min(90, Math.Max(70, contentWidth - textWidth - 10)),
                 Height = 36,
                 Font = UiTheme.Ui
             };
@@ -540,13 +578,14 @@ internal class SimpleForm : Form
 
     public ComboBox AddCombo(string label, string[] items, string selected)
     {
-        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = 560, Height = 28, Font = UiTheme.Ui });
+        var contentWidth = Math.Max(240, ClientSize.Width - 40);
+        Controls.Add(new Label { Text = label, Left = 20, Top = _y, Width = contentWidth, Height = 28, Font = UiTheme.Ui });
         _y += 30;
         var cb = new ComboBox
         {
             Left = 20,
             Top = _y,
-            Width = 540,
+            Width = contentWidth,
             Height = 32,
             Font = UiTheme.Ui,
             DropDownStyle = ComboBoxStyle.DropDownList
@@ -560,12 +599,13 @@ internal class SimpleForm : Form
 
     public void AddHint(string text)
     {
+        var contentWidth = Math.Max(240, ClientSize.Width - 40);
         Controls.Add(new Label
         {
             Text = text,
             Left = 20,
             Top = _y,
-            Width = 540,
+            Width = contentWidth,
             Height = 28,
             Font = UiTheme.Ui,
             ForeColor = Color.DimGray
@@ -575,12 +615,13 @@ internal class SimpleForm : Form
 
     public CheckBox AddCheck(string text, bool value)
     {
+        var contentWidth = Math.Max(240, ClientSize.Width - 40);
         var cb = new CheckBox
         {
             Text = text,
             Left = 20,
             Top = _y,
-            Width = 540,
+            Width = contentWidth,
             Height = 32,
             Font = UiTheme.Ui,
             Checked = value
