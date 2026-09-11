@@ -23,6 +23,44 @@ public static class Engine
         }
     }
 
+    public static bool ProcessRunning(WatchCondition condition)
+    {
+        if (string.IsNullOrWhiteSpace(condition.Process)) return false;
+        var pattern = condition.Process.Trim();
+        var exactPattern = pattern.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? pattern[..^4] : pattern;
+        try
+        {
+            return Process.GetProcesses().Any(p =>
+            {
+                try
+                {
+                    var processName = p.ProcessName + ".exe";
+                    return condition.ProcessMatch?.ToLowerInvariant() switch
+                    {
+                        "contains" => processName.Contains(pattern, StringComparison.OrdinalIgnoreCase),
+                        "regex" => Regex.IsMatch(processName, pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100)),
+                        _ => string.Equals(p.ProcessName, exactPattern, StringComparison.OrdinalIgnoreCase)
+                    };
+                }
+                catch { return false; }
+                finally { p.Dispose(); }
+            });
+        }
+        catch { return false; }
+    }
+
+    public static bool IsValidProcessPattern(string pattern, string? mode)
+    {
+        if (string.IsNullOrWhiteSpace(pattern)) return false;
+        if (!string.Equals(mode, "regex", StringComparison.OrdinalIgnoreCase)) return true;
+        try
+        {
+            _ = new Regex(pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
+            return true;
+        }
+        catch (ArgumentException) { return false; }
+    }
+
     public static int KillByName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return 0;
@@ -162,8 +200,8 @@ public static class Engine
 
     public static bool EvalCondition(WatchCondition c) => c.Type switch
     {
-        "process_missing" => !ProcessRunning(c.Process),
-        "process_running" => ProcessRunning(c.Process),
+        "process_missing" => !ProcessRunning(c),
+        "process_running" => ProcessRunning(c),
         "port_idle" => !PortOpen(c.Host, c.Port),
         "port_open" => PortOpen(c.Host, c.Port),
         "serial_missing" => !SerialPortPresent(c.SerialPort),
@@ -220,8 +258,8 @@ public static class Engine
 
     public static string ConditionText(WatchCondition c) => c.Type switch
     {
-        "process_missing" => "进程消失: " + c.Process,
-        "process_running" => "进程存在: " + c.Process,
+        "process_missing" => ProcessText("进程消失", c),
+        "process_running" => ProcessText("进程存在", c),
         "port_idle" => $"网络端口空闲/掉线: {c.Host}:{c.Port}",
         "port_open" => $"网络端口可连通: {c.Host}:{c.Port}",
         "serial_missing" => "串口消失/掉线: " + NormalizeSerialName(c.SerialPort),
@@ -230,6 +268,17 @@ public static class Engine
         "serial_busy" => "串口非空闲(被占用): " + NormalizeSerialName(c.SerialPort),
         _ => c.Type
     };
+
+    private static string ProcessText(string prefix, WatchCondition c)
+    {
+        var mode = c.ProcessMatch?.ToLowerInvariant() switch
+        {
+            "contains" => "模糊",
+            "regex" => "正则",
+            _ => "精确"
+        };
+        return $"{prefix}({mode}): {c.Process}";
+    }
 
     public static string ActionText(WatchAction a)
     {

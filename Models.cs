@@ -27,6 +27,8 @@ public class WatchCondition
 {
     public string Type { get; set; } = "process_missing";
     public string Process { get; set; } = "";
+    /// <summary>进程匹配模式：exact 精确、contains 模糊、regex 正则。</summary>
+    public string ProcessMatch { get; set; } = "exact";
     public string Host { get; set; } = "127.0.0.1";
     public int Port { get; set; }
     /// <summary>串口名，如 COM3</summary>

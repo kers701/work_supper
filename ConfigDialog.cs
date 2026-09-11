@@ -150,17 +150,30 @@ public class ConfigDialog : Form
         if (picker.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(picker.SelectedProcess))
             return;
 
-        using var f = new SimpleForm("进程条件", 560, 300);
+        using var f = new SimpleForm("进程条件", 560, 360);
         var name = f.AddText("已选择进程（可修改）", picker.SelectedProcess);
         var type = f.AddCombo("类型：process_missing=消失成立，process_running=存在成立",
             new[] { "process_missing", "process_running" }, "process_missing");
+        var match = f.AddCombo("匹配方式：精确 / 模糊包含 / 正则表达式",
+            new[] { "精确匹配", "模糊包含", "正则表达式" }, "精确匹配");
         if (f.ShowDialog(this) != DialogResult.OK) return;
         if (string.IsNullOrWhiteSpace(name.Text))
         {
             MessageBox.Show(this, "请填写进程名");
             return;
         }
-        _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim() });
+        var mode = match.Text switch
+        {
+            "模糊包含" => "contains",
+            "正则表达式" => "regex",
+            _ => "exact"
+        };
+        if (!Engine.IsValidProcessPattern(name.Text.Trim(), mode))
+        {
+            MessageBox.Show(this, "正则表达式格式无效，请检查后重试", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        _conditions.Add(new WatchCondition { Type = type.Text, Process = name.Text.Trim(), ProcessMatch = mode });
         RefreshConds();
     }
 
