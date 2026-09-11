@@ -8,7 +8,7 @@
     <AssemblyName>ProcessGuard</AssemblyName>
     <RootNamespace>ProcessGuard</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>dog_blue.ico</ApplicationIcon>
+    <ApplicationIcon>snowflake.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

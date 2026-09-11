@@ -5,6 +5,7 @@ public class ConfigDialog : Form
     public WatchConfig? Result { get; private set; }
 
     private readonly WatchConfig _src;
+    private readonly IReadOnlyList<WatchConfig> _allConfigs;
     private readonly TextBox _name = new();
     private readonly TextBox _interval = new();
     private readonly TextBox _cooldown = new();
@@ -15,9 +16,10 @@ public class ConfigDialog : Form
     private readonly List<WatchCondition> _conditions = new();
     private readonly List<WatchAction> _actions = new();
 
-    public ConfigDialog(WatchConfig? existing)
+    public ConfigDialog(WatchConfig? existing, IReadOnlyList<WatchConfig>? allConfigs = null)
     {
         _src = existing ?? new WatchConfig();
+        _allConfigs = allConfigs ?? new[] { _src };
         _conditions.AddRange(_src.Conditions);
         _actions.AddRange(_src.Actions);
 
@@ -86,7 +88,8 @@ public class ConfigDialog : Form
                 RefreshConds();
             }
         });
-        Controls.AddRange(new Control[] { bp, bport, bserial, bdc });
+        var blink = Btn("添加连携条件", 740, y, 140, 40, AddLinkCondition);
+        Controls.AddRange(new Control[] { bp, bport, bserial, bdc, blink });
         _conds.DoubleClick += (_, _) => EditSelectedCondition();
         y += 56;
 
@@ -99,6 +102,7 @@ public class ConfigDialog : Form
         Controls.Add(_acts);
         y += 212;
         Controls.Add(Btn("添加运行文件", 20, y, 180, 40, () => AddOpen()));
+        Controls.Add(Btn("添加连携动作", 410, y, 180, 40, () => AddLinkAction()));
         Controls.Add(Btn("删除选中动作", 220, y, 180, 40, () =>
         {
             if (_acts.SelectedIndex >= 0)
@@ -166,6 +170,59 @@ public class ConfigDialog : Form
         foreach (var a in _actions) _acts.Items.Add(Engine.ActionText(a));
     }
 
+    private List<WatchConfig> LinkTargets() => _allConfigs.Where(x => x.Id != _src.Id).ToList();
+
+    private static string TargetText(WatchConfig config) =>
+        $"{config.Name} [{config.Id[..Math.Min(8, config.Id.Length)]}]";
+
+    private void AddLinkCondition()
+    {
+        var targets = LinkTargets();
+        if (targets.Count == 0)
+        {
+            MessageBox.Show(this, "请先创建另一套配置，才能建立连携。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        using var f = new SimpleForm("添加连携条件", 600, 300);
+        var type = f.AddCombo("条件：上游冷却中 / 上游未触发",
+            new[] { "link_cooling", "link_untriggered" }, "link_cooling");
+        var target = f.AddCombo("上游配置", targets.Select(TargetText).ToArray(), TargetText(targets[0]));
+        if (f.ShowDialog(this) != DialogResult.OK) return;
+        var index = target.SelectedIndex;
+        if (index < 0) return;
+        _conditions.Add(new WatchCondition { Type = type.Text, LinkedConfigId = targets[index].Id });
+        RefreshConds();
+    }
+
+    private void AddLinkAction(WatchAction? existing = null)
+    {
+        var targets = LinkTargets();
+        if (targets.Count == 0)
+        {
+            MessageBox.Show(this, "请先创建另一套配置，才能建立连携。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        using var f = new SimpleForm("添加连携动作", 600, 250);
+        var existingTarget = targets.FirstOrDefault(x => x.Id == existing?.LinkedConfigId) ?? targets[0];
+        var target = f.AddCombo("触发后立即检测的配置", targets.Select(TargetText).ToArray(), TargetText(existingTarget));
+        if (f.ShowDialog(this) != DialogResult.OK || target.SelectedIndex < 0) return;
+        _actions.Add(new WatchAction { Type = "link_config", LinkedConfigId = targets[target.SelectedIndex].Id });
+        RefreshActs();
+    }
+
+    private void EditLinkCondition(WatchCondition old)
+    {
+        var targets = LinkTargets();
+        if (targets.Count == 0) return;
+        using var f = new SimpleForm("编辑连携条件", 600, 300);
+        var type = f.AddCombo("条件：上游冷却中 / 上游未触发",
+            new[] { "link_cooling", "link_untriggered" }, old.Type);
+        var existingTarget = targets.FirstOrDefault(x => x.Id == old.LinkedConfigId) ?? targets[0];
+        var target = f.AddCombo("上游配置", targets.Select(TargetText).ToArray(), TargetText(existingTarget));
+        if (f.ShowDialog(this) != DialogResult.OK || target.SelectedIndex < 0) return;
+        _conditions.Add(new WatchCondition { Type = type.Text, LinkedConfigId = targets[target.SelectedIndex].Id });
+    }
+
     private void EditSelectedCondition()
     {
         var index = _conds.SelectedIndex;
@@ -180,7 +237,13 @@ public class ConfigDialog : Form
                 break;
             case "port_idle":
             case "port_open":
+            case "port_occupied":
+            case "port_free":
                 EditPort(old);
+                break;
+            case "link_cooling":
+            case "link_untriggered":
+                EditLinkCondition(old);
                 break;
             default:
                 EditSerial(old);
@@ -196,7 +259,8 @@ public class ConfigDialog : Form
         if (index < 0) return;
         var old = _actions[index];
         _actions.RemoveAt(index);
-        AddOpen(old);
+        if (old.Type == "link_config") AddLinkAction(old);
+        else AddOpen(old);
         if (_actions.Count == index) _actions.Insert(index, old);
         RefreshActs();
     }

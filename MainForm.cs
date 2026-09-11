@@ -9,6 +9,8 @@ public class MainForm : Form
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly Dictionary<string, DateTime> _lastCheck = new();
     private readonly Dictionary<string, DateTime> _lastTrigger = new();
+    private int _sortColumn = -1;
+    private bool _sortAscending = true;
     private bool _reallyQuit;
 
     public MainForm()
@@ -53,17 +55,18 @@ public class MainForm : Form
         _grid.ReadOnly = true;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = false;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.CellPainting += PaintSelectedBorder;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.EnableHeadersVisualStyles = false;
         _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 244, 248);
+        _grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(240, 244, 248);
+        _grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
         _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
         _grid.Columns.Add("id", "id");
         _grid.Columns["id"]!.Visible = false;
@@ -83,7 +86,15 @@ public class MainForm : Form
         _grid.Columns["count"]!.FillWeight = 95;
         _grid.Columns["last"]!.FillWeight = 90;
         _grid.Columns["msg"]!.FillWeight = 380;
-        _grid.CellDoubleClick += (_, _) => EditConfig();
+        foreach (DataGridViewColumn column in _grid.Columns)
+            column.SortMode = DataGridViewColumnSortMode.Programmatic;
+        _grid.ColumnHeaderMouseClick += (_, e) =>
+        {
+            if (e.ColumnIndex == 0) return;
+            if (_sortColumn == e.ColumnIndex) _sortAscending = !_sortAscending;
+            else { _sortColumn = e.ColumnIndex; _sortAscending = true; }
+            RefreshGrid();
+        };
 
         var toggle = MakeBtn("切换选中配置开关", 20, 660, 200, 40, ToggleSelected);
         var export = MakeBtn("导出配置", 240, 660, 140, 40, ExportConfigs);
@@ -171,7 +182,20 @@ public class MainForm : Form
         if (_grid.SelectedRows.Count > 0)
             sel = Convert.ToString(_grid.SelectedRows[0].Cells["id"].Value);
         _grid.Rows.Clear();
-        foreach (var c in _state.Configs)
+        IEnumerable<WatchConfig> configs = _state.Configs;
+        configs = _sortColumn switch
+        {
+            1 => _sortAscending ? configs.OrderBy(x => x.Enabled) : configs.OrderByDescending(x => x.Enabled),
+            2 => _sortAscending ? configs.OrderBy(x => x.Name) : configs.OrderByDescending(x => x.Name),
+            3 => _sortAscending ? configs.OrderBy(x => x.Logic) : configs.OrderByDescending(x => x.Logic),
+            4 => _sortAscending ? configs.OrderBy(x => x.IntervalMin) : configs.OrderByDescending(x => x.IntervalMin),
+            5 => _sortAscending ? configs.OrderBy(x => x.CooldownMin) : configs.OrderByDescending(x => x.CooldownMin),
+            6 => _sortAscending ? configs.OrderBy(x => x.TriggerCount) : configs.OrderByDescending(x => x.TriggerCount),
+            7 => _sortAscending ? configs.OrderBy(x => x.LastTrigger) : configs.OrderByDescending(x => x.LastTrigger),
+            8 => _sortAscending ? configs.OrderBy(x => x.LastMessage) : configs.OrderByDescending(x => x.LastMessage),
+            _ => configs
+        };
+        foreach (var c in configs)
         {
             _grid.Rows.Add(c.Id, c.Enabled ? "开" : "关", c.Name, c.Logic, c.IntervalMin,
                 c.CooldownMin, c.TriggerCount, c.LastTrigger, c.LastMessage);
@@ -189,18 +213,6 @@ public class MainForm : Form
         }
     }
 
-    private static void PaintSelectedBorder(object? sender, DataGridViewCellPaintingEventArgs e)
-    {
-        if (e.RowIndex < 0 || !e.State.HasFlag(DataGridViewElementStates.Selected)) return;
-        e.Paint(e.CellBounds, DataGridViewPaintParts.All);
-        using var pen = new Pen(Color.FromArgb(39, 120, 224), 1);
-        var rect = e.CellBounds;
-        rect.Width -= 1;
-        rect.Height -= 1;
-        e.Graphics?.DrawRectangle(pen, rect);
-        e.Handled = true;
-    }
-
     private WatchConfig? Selected()
     {
         if (_grid.SelectedRows.Count == 0) return null;
@@ -210,7 +222,7 @@ public class MainForm : Form
 
     private void AddConfig()
     {
-        using var dlg = new ConfigDialog(null);
+        using var dlg = new ConfigDialog(null, _state.Configs);
         if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
         {
             _state.Configs.Add(dlg.Result);
@@ -227,7 +239,7 @@ public class MainForm : Form
             MessageBox.Show(this, "请先选中一条配置", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        using var dlg = new ConfigDialog(cfg);
+        using var dlg = new ConfigDialog(cfg, _state.Configs);
         if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
         {
             var i = _state.Configs.FindIndex(c => c.Id == cfg.Id);
@@ -364,12 +376,12 @@ public class MainForm : Form
             _lastCheck[cfg.Id] = now;
             try
             {
-                if (Engine.EvalConditions(cfg))
+                if (Engine.EvalConditions(cfg, _state, _lastTrigger))
                 {
-                    var msgs = cfg.Actions.Select(Engine.RunAction).ToList();
                     _lastTrigger[cfg.Id] = DateTime.Now;
                     cfg.TriggerCount++;
                     cfg.LastTrigger = DateTime.Now.ToString("HH:mm:ss");
+                    var msgs = cfg.Actions.Select(x => RunActionWithLinks(x, new HashSet<string> { cfg.Id })).ToList();
                     cfg.LastMessage = $"触发{cfg.TriggerCount}次 | " + string.Join("；", msgs);
                     changed = true;
                 }
@@ -388,5 +400,21 @@ public class MainForm : Form
         if (!changed) return;
         Storage.Save(_state);
         RefreshGrid();
+    }
+
+    private string RunActionWithLinks(WatchAction action, HashSet<string> chain)
+    {
+        if (action.Type != "link_config") return Engine.RunAction(action);
+        var target = _state.Configs.FirstOrDefault(x => x.Id == action.LinkedConfigId);
+        if (target == null) return "连携目标不存在";
+        if (!target.Enabled) return $"连携目标「{target.Name}」已关闭";
+        if (!chain.Add(target.Id)) return $"检测到连携循环: {target.Name}";
+        if (!Engine.EvalConditions(target, _state, _lastTrigger)) return $"连携目标「{target.Name}」条件未满足";
+        _lastTrigger[target.Id] = DateTime.Now;
+        target.TriggerCount++;
+        target.LastTrigger = DateTime.Now.ToString("HH:mm:ss");
+        var messages = target.Actions.Select(x => RunActionWithLinks(x, chain)).ToList();
+        target.LastMessage = $"连携触发{target.TriggerCount}次 | " + string.Join("；", messages);
+        return $"已连携触发「{target.Name}」";
     }
 }

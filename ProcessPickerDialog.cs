@@ -39,13 +39,12 @@ public sealed class ProcessPickerDialog : Form
         _grid.AllowUserToDeleteRows = false;
         _grid.MultiSelect = false;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.White;
+        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
         _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.CellPainting += PaintSelectedBorder;
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.RowTemplate.Height = 42;
@@ -103,18 +102,6 @@ public sealed class ProcessPickerDialog : Form
         foreach (var item in _items.Where(x => query.Length == 0 || x.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || x.WindowTitle.Contains(query, StringComparison.OrdinalIgnoreCase)))
             _grid.Rows.Add(item.Name, item.Id, item.WindowTitle, $"{item.MemoryMb:N0} MB");
         _status.Text = $"共 {_items.Count} 个进程，显示 {_grid.Rows.Count} 个 · 双击或点击“添加选中”";
-    }
-
-    private void PaintSelectedBorder(object? sender, DataGridViewCellPaintingEventArgs e)
-    {
-        if (e.RowIndex < 0 || !e.State.HasFlag(DataGridViewElementStates.Selected)) return;
-        e.Paint(e.CellBounds, DataGridViewPaintParts.All);
-        using var pen = new Pen(Color.FromArgb(39, 120, 224), 1);
-        var rect = e.CellBounds;
-        rect.Width -= 1;
-        rect.Height -= 1;
-        e.Graphics?.DrawRectangle(pen, rect);
-        e.Handled = true;
     }
 
     private void Choose()

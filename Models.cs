@@ -26,6 +26,8 @@ public class WatchConfig
 public class WatchCondition
 {
     public string Type { get; set; } = "process_missing";
+    /// <summary>连携目标配置 ID，用于 link_* 条件。</summary>
+    public string LinkedConfigId { get; set; } = "";
     public string Process { get; set; } = "";
     /// <summary>进程匹配模式：exact 精确、contains 模糊、regex 正则。</summary>
     public string ProcessMatch { get; set; } = "exact";
@@ -38,6 +40,8 @@ public class WatchCondition
 public class WatchAction
 {
     public string Type { get; set; } = "open_program";
+    /// <summary>连携目标配置 ID，用于 link_config 动作。</summary>
+    public string LinkedConfigId { get; set; } = "";
     public string Path { get; set; } = "";
     public string Args { get; set; } = "";
     public string Cwd { get; set; } = "";

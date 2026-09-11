@@ -235,6 +235,18 @@ public static class Engine
         _ => false
     };
 
+    public static bool EvalCondition(WatchCondition c, AppState state, IReadOnlyDictionary<string, DateTime> lastTriggers)
+    {
+        if (c.Type is not ("link_cooling" or "link_untriggered"))
+            return EvalCondition(c);
+        var target = state.Configs.FirstOrDefault(x => x.Id == c.LinkedConfigId);
+        if (target == null) return false;
+        if (c.Type == "link_untriggered")
+            return target.TriggerCount == 0 && string.IsNullOrWhiteSpace(target.LastTrigger);
+        if (!lastTriggers.TryGetValue(target.Id, out var last)) return false;
+        return target.CooldownMin > 0 && (DateTime.Now - last).TotalMinutes < target.CooldownMin;
+    }
+
     public static bool EvalConditions(WatchConfig cfg)
     {
         if (cfg.Conditions.Count == 0) return false;
@@ -244,8 +256,18 @@ public static class Engine
             : results.Any(x => x);
     }
 
+    public static bool EvalConditions(WatchConfig cfg, AppState state, IReadOnlyDictionary<string, DateTime> lastTriggers)
+    {
+        if (cfg.Conditions.Count == 0) return false;
+        var results = cfg.Conditions.Select(x => EvalCondition(x, state, lastTriggers)).ToList();
+        return string.Equals(cfg.Logic, "AND", StringComparison.OrdinalIgnoreCase)
+            ? results.All(x => x)
+            : results.Any(x => x);
+    }
+
     public static string RunAction(WatchAction action)
     {
+        if (action.Type == "link_config") return "连携配置由守护引擎执行";
         if (action.Type != "open_program") return "未知动作";
         if (string.IsNullOrWhiteSpace(action.Path)) return "未指定程序路径";
 
@@ -301,6 +323,8 @@ public static class Engine
         "port_open" => $"网络端口可连通: {c.Host}:{c.Port}",
         "port_occupied" => $"网络端口被占用: {c.Host}:{c.Port}",
         "port_free" => $"网络端口空闲可绑定: {c.Host}:{c.Port}",
+        "link_cooling" => $"上游冷却中: {c.LinkedConfigId}",
+        "link_untriggered" => $"上游未触发: {c.LinkedConfigId}",
         "serial_missing" => "串口消失/掉线: " + NormalizeSerialName(c.SerialPort),
         "serial_present" => "串口存在: " + NormalizeSerialName(c.SerialPort),
         "serial_idle" => "串口空闲(无人占用): " + NormalizeSerialName(c.SerialPort),
@@ -321,6 +345,7 @@ public static class Engine
 
     public static string ActionText(WatchAction a)
     {
+        if (a.Type == "link_config") return $"连携动作: 触发配置 {a.LinkedConfigId}";
         var extra = string.IsNullOrWhiteSpace(a.Args) ? "" : "  参数:" + a.Args;
         var kill = a.KillBefore ? "先结束残留" : "不结束残留";
         return $"运行文件: {a.Path}{extra}  [{kill}]";
