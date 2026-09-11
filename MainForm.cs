@@ -41,8 +41,7 @@ public class MainForm : Form
             Storage.Save(_state);
         };
 
-        var filterLabel = new Label { Text = "筛选：", Left = 225, Top = 17, Width = 70, Height = 30, Font = UiTheme.UiBold, AutoSize = false };
-        _filter.SetBounds(300, 12, 490, 36);
+        _filter.SetBounds(225, 12, 565, 36);
         _filter.Font = UiTheme.Ui;
         _filter.PlaceholderText = "按配置名称、逻辑或最近结果筛选";
         _filter.TextChanged += (_, _) => RefreshGrid();
@@ -118,7 +117,7 @@ public class MainForm : Form
             Height = 32
         };
 
-        Controls.AddRange(new Control[] { masterLabel, _master, filterLabel, _filter, add, edit, del, trayBtn, _grid, toggle, export, import, tip });
+        Controls.AddRange(new Control[] { masterLabel, _master, _filter, add, edit, del, trayBtn, _grid, toggle, export, import, tip });
 
         var menu = new ContextMenuStrip { Font = UiTheme.Ui };
         menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
