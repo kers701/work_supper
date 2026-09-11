@@ -98,7 +98,7 @@ public class ConfigDialog : Form
         ConfigureSelectionStyle(_acts);
         Controls.Add(_acts);
         y += 212;
-        Controls.Add(Btn("添加运行文件", 20, y, 180, 40, AddOpen));
+        Controls.Add(Btn("添加运行文件", 20, y, 180, 40, () => AddOpen()));
         Controls.Add(Btn("删除选中动作", 220, y, 180, 40, () =>
         {
             if (_acts.SelectedIndex >= 0)

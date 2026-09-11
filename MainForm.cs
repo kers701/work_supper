@@ -193,7 +193,7 @@ public class MainForm : Form
         var rect = e.CellBounds;
         rect.Width -= 1;
         rect.Height -= 1;
-        e.Graphics.DrawRectangle(pen, rect);
+        e.Graphics?.DrawRectangle(pen, rect);
         e.Handled = true;
     }
 
