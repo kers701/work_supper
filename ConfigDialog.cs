@@ -126,16 +126,15 @@ public class ConfigDialog : Form
         list.DrawItem += (_, e) =>
         {
             if (e.Index < 0) return;
-            using (var background = new SolidBrush(Color.White))
-                e.Graphics.FillRectangle(background, e.Bounds);
-            using var textBrush = new SolidBrush(Color.FromArgb(30, 40, 55));
-            e.Graphics.DrawString(list.Items[e.Index]?.ToString() ?? "", list.Font, textBrush, e.Bounds.Left + 8, e.Bounds.Top + 5);
-            if ((e.State & DrawItemState.Selected) != 0)
-            {
-                using var pen = new Pen(Color.FromArgb(39, 120, 224), 2);
-                var rect = new Rectangle(e.Bounds.Left + 1, e.Bounds.Top + 2, e.Bounds.Width - 3, e.Bounds.Height - 5);
-                e.Graphics.DrawRectangle(pen, rect);
-            }
+            var selected = (e.State & DrawItemState.Selected) != 0;
+            using var background = new SolidBrush(selected
+                ? Color.FromArgb(48, 93, 169, 235)
+                : Color.White);
+            e.Graphics.FillRectangle(background, e.Bounds);
+            var text = list.Items[e.Index]?.ToString() ?? "";
+            TextRenderer.DrawText(e.Graphics, text, list.Font, e.Bounds,
+                Color.FromArgb(30, 40, 55),
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         };
     }
 
