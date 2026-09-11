@@ -39,11 +39,11 @@ public sealed class ProcessPickerDialog : Form
         _grid.AllowUserToDeleteRows = false;
         _grid.MultiSelect = false;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;

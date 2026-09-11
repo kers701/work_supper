@@ -5,6 +5,7 @@ public class MainForm : Form
     private readonly AppState _state;
     private readonly DataGridView _grid = new();
     private readonly ToggleSwitch _master = new();
+    private readonly TextBox _filter = new();
     private readonly NotifyIcon _tray = new();
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly Dictionary<string, DateTime> _lastCheck = new();
@@ -40,6 +41,12 @@ public class MainForm : Form
             Storage.Save(_state);
         };
 
+        var filterLabel = new Label { Text = "筛选", Left = 235, Top = 17, Width = 45, Height = 30, Font = UiTheme.UiBold };
+        _filter.SetBounds(280, 12, 510, 36);
+        _filter.Font = UiTheme.Ui;
+        _filter.PlaceholderText = "按配置名称、逻辑或最近结果筛选";
+        _filter.TextChanged += (_, _) => RefreshGrid();
+
         var add = MakeBtn("添加配置", 820, 12, 120, 36, AddConfig);
         var edit = MakeBtn("编辑选中", 950, 12, 120, 36, EditConfig);
         var del = MakeBtn("删除选中", 1080, 12, 120, 36, DeleteConfig);
@@ -55,11 +62,11 @@ public class MainForm : Form
         _grid.ReadOnly = true;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.MultiSelect = false;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
-        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(48, 93, 169, 235);
+        _grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 225, 242, 255);
         _grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(30, 40, 55);
         _grid.RowHeadersVisible = false;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
@@ -109,7 +116,7 @@ public class MainForm : Form
             Height = 32
         };
 
-        Controls.AddRange(new Control[] { masterLabel, _master, add, edit, del, trayBtn, _grid, toggle, export, import, tip });
+        Controls.AddRange(new Control[] { masterLabel, _master, filterLabel, _filter, add, edit, del, trayBtn, _grid, toggle, export, import, tip });
 
         var menu = new ContextMenuStrip { Font = UiTheme.Ui };
         menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
@@ -195,6 +202,12 @@ public class MainForm : Form
             8 => _sortAscending ? configs.OrderBy(x => x.LastMessage) : configs.OrderByDescending(x => x.LastMessage),
             _ => configs
         };
+        var query = _filter.Text.Trim();
+        if (query.Length > 0)
+            configs = configs.Where(c => c.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || c.Logic.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || c.LastMessage.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (c.Enabled ? "开" : "关").Contains(query, StringComparison.OrdinalIgnoreCase));
         foreach (var c in configs)
         {
             _grid.Rows.Add(c.Id, c.Enabled ? "开" : "关", c.Name, c.Logic, c.IntervalMin,

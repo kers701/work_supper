@@ -1,22 +1,47 @@
 namespace ProcessGuard;
 
-public sealed class ToggleSwitch : CheckBox
+public sealed class ToggleSwitch : Control
 {
+    private bool _checked;
+    public event EventHandler? CheckedChanged;
+
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value) return;
+            _checked = value;
+            Invalidate();
+            CheckedChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     public ToggleSwitch()
     {
-        AutoSize = false;
         Width = 54;
         Height = 30;
-        Appearance = Appearance.Normal;
-        FlatStyle = FlatStyle.Flat;
-        FlatAppearance.BorderSize = 0;
-        Text = "";
-        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
-        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
         TabStop = true;
-        CheckedChanged += (_, _) => Invalidate();
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        Checked = !Checked;
+        base.OnClick(e);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Space)
+        {
+            Checked = !Checked;
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 
     protected override void OnPaint(PaintEventArgs e)
